@@ -1,0 +1,13 @@
+{
+  "name": "conserje-widget",
+  "version": "0.1.0",
+  "description": "Embeddable chat widget for Conserje. No dependencies, no framework, one script tag.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node --check src/conserje.js",
+    "serve": "node --run build && node serve-demo.mjs"
+  }
+}

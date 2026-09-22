@@ -1,0 +1,25 @@
+# Dependencies
+backend/vendor/
+widget/node_modules/
+
+# Build output
+widget/dist/
+
+# Secrets and local config
+.env
+*.env.local
+backend/.env
+n8n/.env
+
+# Runtime state (conversations, rate-limit buckets)
+backend/var/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+backend/.phpunit.cache/
+coverage/

@@ -1,0 +1,30 @@
+{
+  "id": "cerebritofeliz",
+  "name": "Cerebrito Feliz",
+  "locale": "es",
+  "model": "claude-opus-5",
+  "allowedOrigins": [
+    "https://cerebritofeliz.com",
+    "https://www.cerebritofeliz.com",
+    "http://localhost:3000"
+  ],
+  "greeting": "¡Hola! ¿Buscas algo para tu equipo, tu colegio o para ti?",
+  "businessContext": "EDIT THIS BEFORE GOING LIVE. Describe the business in plain prose: what it sells, who it is for, what it explicitly does not do, and anything the assistant must never promise (pricing, delivery dates, availability). The assistant will only ever claim what this paragraph supports, so vagueness here produces a vague assistant and wrong claims here produce confident wrong claims.",
+  "collect": [
+    "Who they are buying for: themselves, a team, or an institution",
+    "How many people it is for",
+    "When they want to start",
+    "A name and an email address"
+  ],
+  "budgetBands": [
+    "individual",
+    "small-team",
+    "institution"
+  ],
+  "maxTurns": 10,
+  "maxMessageChars": 800,
+  "requestsPerHour": 40,
+  "webhookUrlEnv": "CONSERJE_WEBHOOK_CEREBRITOFELIZ",
+  "hotScoreThreshold": 65,
+  "warmScoreThreshold": 35
+}

@@ -1,0 +1,264 @@
+/* Styles for the widget. Injected into a shadow root at build time, so none of
+   these selectors can reach the host page and none of the host page's CSS can
+   reach them. Only the :host block is negotiable from outside. */
+
+:host {
+  --cj-accent: #2f6f4f;
+  --cj-accent-text: #ffffff;
+  --cj-surface: #ffffff;
+  --cj-surface-alt: #f3f4f6;
+  --cj-text: #14181f;
+  --cj-text-muted: #5b6472;
+  --cj-border: #e2e5ea;
+  --cj-radius: 14px;
+  --cj-shadow: 0 12px 32px rgba(15, 20, 30, 0.18);
+  --cj-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147483000;
+  font-family: var(--cj-font);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host(:not([data-theme="light"])) {
+    --cj-surface: #171a20;
+    --cj-surface-alt: #22262e;
+    --cj-text: #eef1f5;
+    --cj-text-muted: #9aa3b1;
+    --cj-border: #2d323b;
+    --cj-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:host([data-theme="dark"]) {
+  --cj-surface: #171a20;
+  --cj-surface-alt: #22262e;
+  --cj-text: #eef1f5;
+  --cj-text-muted: #9aa3b1;
+  --cj-border: #2d323b;
+  --cj-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.launcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cj-accent);
+  color: var(--cj-accent-text);
+  font: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: var(--cj-shadow);
+  transition: transform 0.15s ease;
+}
+
+.launcher:hover { transform: translateY(-2px); }
+.launcher:focus-visible { outline: 3px solid var(--cj-accent); outline-offset: 3px; }
+.launcher[hidden] { display: none; }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  height: 560px;
+  max-height: calc(100vh - 40px);
+  background: var(--cj-surface);
+  border: 1px solid var(--cj-border);
+  border-radius: var(--cj-radius);
+  box-shadow: var(--cj-shadow);
+  overflow: hidden;
+}
+
+.panel[hidden] { display: none; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--cj-accent);
+  color: var(--cj-accent-text);
+}
+
+.header h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.header p { margin: 2px 0 0; font-size: 12px; opacity: 0.85; }
+
+.close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.close:hover { background: rgba(255, 255, 255, 0.18); }
+.close:focus-visible { outline: 2px solid var(--cj-accent-text); outline-offset: 2px; }
+
+.log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--cj-surface);
+}
+
+.msg {
+  max-width: 85%;
+  padding: 10px 13px;
+  border-radius: var(--cj-radius);
+  font-size: 14.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg.bot {
+  align-self: flex-start;
+  background: var(--cj-surface-alt);
+  color: var(--cj-text);
+  border-bottom-left-radius: 4px;
+}
+
+.msg.user {
+  align-self: flex-end;
+  background: var(--cj-accent);
+  color: var(--cj-accent-text);
+  border-bottom-right-radius: 4px;
+}
+
+.msg.error {
+  align-self: stretch;
+  max-width: 100%;
+  background: transparent;
+  border: 1px dashed var(--cj-border);
+  color: var(--cj-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.retry {
+  margin-left: 6px;
+  border: 0;
+  background: none;
+  color: var(--cj-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.typing {
+  align-self: flex-start;
+  display: flex;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--cj-surface-alt);
+  border-radius: var(--cj-radius);
+  border-bottom-left-radius: 4px;
+}
+
+.typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cj-text-muted);
+  animation: cj-bounce 1.2s infinite ease-in-out;
+}
+
+.typing span:nth-child(2) { animation-delay: 0.15s; }
+.typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes cj-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launcher, .typing span { transition: none; animation: none; }
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--cj-border);
+  background: var(--cj-surface);
+}
+
+.composer textarea {
+  flex: 1;
+  resize: none;
+  min-height: 42px;
+  max-height: 120px;
+  padding: 11px 12px;
+  border: 1px solid var(--cj-border);
+  border-radius: 10px;
+  background: var(--cj-surface);
+  color: var(--cj-text);
+  font: inherit;
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+
+.composer textarea:focus-visible { outline: 2px solid var(--cj-accent); outline-offset: -1px; }
+.composer textarea:disabled { background: var(--cj-surface-alt); cursor: not-allowed; }
+
+.send {
+  align-self: flex-end;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cj-accent);
+  color: var(--cj-accent-text);
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.send:disabled { opacity: 0.45; cursor: not-allowed; }
+.send:focus-visible { outline: 3px solid var(--cj-accent); outline-offset: 2px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 480px) {
+  :host { right: 0; bottom: 0; left: 0; }
+  .launcher { position: fixed; right: 16px; bottom: 16px; }
+  .panel {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+}
