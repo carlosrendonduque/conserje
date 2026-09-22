@@ -1,0 +1,396 @@
+{
+  "name": "Conserje - lead routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "conserje-lead",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "086a1f08-9c40-445a-b8c6-fcceea0837d5",
+      "name": "Lead webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        300
+      ],
+      "webhookId": "f5b28cb5-b4d5-49cd-875f-72bb75101003"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verify the HMAC signature before anything downstream touches the payload.\n//\n// The webhook URL is effectively public, so a request that arrives here has\n// proved nothing yet. Signature material is `timestamp.rawBody`, which is why\n// \"Raw Body\" is enabled on the webhook node: re-serialising the parsed object\n// would change key order or spacing and every signature would fail.\n//\n// This mirrors WebhookDispatcher::verify() in the PHP backend. The two are\n// kept in step by n8n/test/signature.test.mjs, which runs this exact code\n// against signatures produced by the PHP implementation.\n\nconst crypto = require('crypto');\n\nconst TOLERANCE_SECONDS = 300;\n\nconst secret = $env.CONSERJE_WEBHOOK_SECRET;\n\nif (!secret) {\n  throw new Error(\n    'CONSERJE_WEBHOOK_SECRET is not set on this n8n instance. ' +\n    'Set it in n8n/.env and restart the container.'\n  );\n}\n\nconst item = $input.first();\nconst headers = item.json.headers || {};\nconst signature = headers['x-conserje-signature'];\nconst timestamp = Number(headers['x-conserje-timestamp']);\n\nif (!signature || !Number.isFinite(timestamp)) {\n  throw new Error('Rejected: signature headers are missing.');\n}\n\nif (!item.binary || !item.binary.data) {\n  throw new Error(\n    'Rejected: no raw body. Enable \"Raw Body\" in the webhook node options.'\n  );\n}\n\nconst raw = Buffer.from(item.binary.data.data, 'base64').toString('utf8');\n\n// Reject stale requests: without this, a captured payload stays replayable\n// forever, because its signature never stops being correct.\nconst now = Math.floor(Date.now() / 1000);\n\nif (Math.abs(now - timestamp) > TOLERANCE_SECONDS) {\n  throw new Error('Rejected: timestamp outside tolerance, possible replay.');\n}\n\nconst expected = crypto\n  .createHmac('sha256', secret)\n  .update(`${timestamp}.${raw}`)\n  .digest('hex');\n\nconst expectedBuffer = Buffer.from(expected, 'utf8');\nconst actualBuffer = Buffer.from(String(signature), 'utf8');\n\n// Length is checked first because timingSafeEqual throws on a mismatch.\nif (\n  expectedBuffer.length !== actualBuffer.length ||\n  !crypto.timingSafeEqual(expectedBuffer, actualBuffer)\n) {\n  throw new Error('Rejected: bad signature.');\n}\n\nreturn [{ json: JSON.parse(raw) }];\n"
+      },
+      "id": "108fc492-5f32-4edc-9066-b9c51bea08ec",
+      "name": "Verify signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "910f62c1-18fe-4cb9-8171-d610285fa031",
+                    "leftValue": "={{ $json.lead.tier }}",
+                    "rightValue": "hot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "hot"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a93370ca-2e6b-4e12-8d70-3bc6a0674688",
+                    "leftValue": "={{ $json.lead.tier }}",
+                    "rightValue": "warm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "warm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5bff3b64-0121-4890-b56e-3670db7d12cd",
+                    "leftValue": "={{ $json.lead.tier }}",
+                    "rightValue": "cold",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cold"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2469f76-abe9-4a9e-9feb-0b2d80700c88",
+      "name": "Route by tier",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🔥 Hot lead from {{ $json.site.name }} (score {{ $json.lead.score }})\n\n{{ $json.lead.name || 'No name given' }} — {{ $json.lead.email || $json.lead.phone || 'no contact' }}\nBudget: {{ $json.lead.budgetBand || 'not stated' }} | Timeline: {{ $json.lead.timeline || 'not stated' }}\n\n{{ $json.lead.summary }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f1489152-b8b2-447d-8b84-3912a7de595a",
+      "name": "Alert me now",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.CONSERJE_FROM_EMAIL }}",
+        "toEmail": "={{ $json.lead.email }}",
+        "subject": "=Following up on your message to {{ $json.site.name }}",
+        "emailFormat": "text",
+        "text": "=Hi {{ $json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $json.lead.summary }}\n\nGrab a time that suits you and we will go through it:\n{{ $env.CONSERJE_BOOKING_URL }}\n\nIf anything above is wrong, just reply to this email.",
+        "options": {}
+      },
+      "id": "87fe45b8-7fc6-42af-a7aa-fdac30731482",
+      "name": "Send booking link",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=New lead from {{ $json.site.name }} (score {{ $json.lead.score }})\n\n{{ $json.lead.name || 'No name given' }} — {{ $json.lead.email || $json.lead.phone || 'no contact' }}\n\n{{ $json.lead.summary }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "31b1aa91-ac55-41d8-bcd3-2ae3e235e082",
+      "name": "Alert me quietly",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.CONSERJE_FROM_EMAIL }}",
+        "toEmail": "={{ $json.lead.email }}",
+        "subject": "=Thanks for reaching out to {{ $json.site.name }}",
+        "emailFormat": "text",
+        "text": "=Hi {{ $json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $json.lead.summary }}\n\nSomeone will come back to you shortly. If anything above is wrong, just reply to this email.",
+        "options": {}
+      },
+      "id": "e8eed5fd-aad3-4f4b-abaa-2afb4fbd5a6e",
+      "name": "Acknowledge",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e52a2f62-7356-4638-a9fe-1d6fae457632",
+      "name": "Hold for nurture",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        440,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Flatten the nested payload into one row per lead.\n//\n// The transcript is joined into a single cell rather than dropped: when a\n// lead turns out to be mis-scored, the conversation is the only way to find\n// out why.\n\nconst payload = $input.first().json;\nconst lead = payload.lead || {};\nconst conversation = payload.conversation || {};\n\nconst transcript = (conversation.transcript || [])\n  .map((turn) => `${turn.role === 'user' ? 'Visitor' : 'Assistant'}: ${turn.text}`)\n  .join('\\n');\n\nreturn [{\n  json: {\n    receivedAt: new Date(payload.timestamp * 1000).toISOString(),\n    site: (payload.site || {}).id || '',\n    tier: lead.tier || '',\n    score: lead.score ?? '',\n    name: lead.name || '',\n    email: lead.email || '',\n    phone: lead.phone || '',\n    company: lead.company || '',\n    need: lead.need || '',\n    timeline: lead.timeline || '',\n    budgetBand: lead.budgetBand || '',\n    summary: lead.summary || '',\n    turns: conversation.turns ?? '',\n    conversationId: conversation.id || '',\n    transcript,\n    status: 'new',\n  },\n}]"
+      },
+      "id": "e1a4f0e6-f50c-49a0-bbbb-aaa58364aa27",
+      "name": "Flatten for CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.CONSERJE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "a4e460af-5495-4af6-b000-bb3445a28f5c",
+      "name": "Append to CRM sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, tier: $('Verify signature').first().json.lead.tier }) }}",
+        "options": {}
+      },
+      "id": "c1c79322-6a79-40aa-898e-1658f634805a",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Lead webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify signature": {
+      "main": [
+        [
+          {
+            "node": "Route by tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by tier": {
+      "main": [
+        [
+          {
+            "node": "Alert me now",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert me quietly",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hold for nurture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert me now": {
+      "main": [
+        [
+          {
+            "node": "Send booking link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send booking link": {
+      "main": [
+        [
+          {
+            "node": "Flatten for CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert me quietly": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge": {
+      "main": [
+        [
+          {
+            "node": "Flatten for CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hold for nurture": {
+      "main": [
+        [
+          {
+            "node": "Flatten for CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten for CRM": {
+      "main": [
+        [
+          {
+            "node": "Append to CRM sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to CRM sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "pinData": {}
+}

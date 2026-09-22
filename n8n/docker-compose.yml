@@ -1,0 +1,71 @@
+# Self-hosted n8n for Conserje.
+#
+#   cp .env.example .env    # then fill it in
+#   docker compose up -d
+#   open http://localhost:5678
+#
+# Postgres rather than the default SQLite: workflow executions are the audit
+# trail for every lead that came through, and SQLite under concurrent writes
+# is the wrong place to keep that.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # n8n crashes on boot if Postgres is merely running but not yet
+      # accepting connections, so the dependency below waits on this.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
+
+      # Encrypts stored credentials. Changing it makes every saved
+      # credential unreadable, so set it once and back it up.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+
+      # The signature-verification Code node reads the shared secret from the
+      # environment instead of having it pasted into the workflow, where it
+      # would end up in the exported JSON in this repository.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      CONSERJE_WEBHOOK_SECRET: ${CONSERJE_WEBHOOK_SECRET}
+
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: 336
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  n8n_data:

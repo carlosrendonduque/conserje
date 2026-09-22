@@ -17,6 +17,7 @@ declare(strict_types=1);
 
 use Conserje\Config\SiteRepository;
 use Conserje\Support\Env;
+use Conserje\Support\Path;
 use Conserje\Webhook\WebhookDispatcher;
 use Conserje\Webhook\WebhookException;
 
@@ -28,11 +29,11 @@ Env::load($baseDir . '/.env');
 
 $dryRun = in_array('--dry-run', $argv, true);
 $stateDir = Env::get('CONSERJE_STATE_DIR', './var') ?? './var';
-$stateDir = str_starts_with($stateDir, '/') ? $stateDir : $baseDir . '/' . ltrim($stateDir, './');
-$spoolDir = rtrim($stateDir, '/') . '/spool';
+$stateDir = Path::resolve($baseDir, $stateDir);
+$spoolDir = $stateDir . '/spool';
 
 $sitesDir = Env::get('CONSERJE_SITES_DIR', '../sites') ?? '../sites';
-$sitesDir = str_starts_with($sitesDir, '/') ? $sitesDir : $baseDir . '/' . ltrim($sitesDir, './');
+$sitesDir = Path::resolve($baseDir, $sitesDir);
 
 $files = glob($spoolDir . '/*.json') ?: [];
 

@@ -15,6 +15,7 @@ use Conserje\RateLimit\FileRateLimiter;
 use Conserje\RateLimit\RateLimiter;
 use Conserje\Support\Clock;
 use Conserje\Support\Env;
+use Conserje\Support\Path;
 use Conserje\Support\SystemClock;
 use Conserje\Webhook\LeadDelivery;
 use Conserje\Webhook\WebhookDispatcher;
@@ -42,8 +43,8 @@ final class App
     {
         Env::load($baseDir . '/.env');
 
-        $stateDir = self::resolvePath($baseDir, Env::get('CONSERJE_STATE_DIR', './var') ?? './var');
-        $sitesDir = self::resolvePath($baseDir, Env::get('CONSERJE_SITES_DIR', '../sites') ?? '../sites');
+        $stateDir = Path::resolve($baseDir, Env::get('CONSERJE_STATE_DIR', './var') ?? './var');
+        $sitesDir = Path::resolve($baseDir, Env::get('CONSERJE_SITES_DIR', '../sites') ?? '../sites');
 
         $clock = new SystemClock();
 
@@ -71,12 +72,4 @@ final class App
         );
     }
 
-    private static function resolvePath(string $baseDir, string $path): string
-    {
-        if (str_starts_with($path, '/')) {
-            return rtrim($path, '/');
-        }
-
-        return rtrim($baseDir . '/' . ltrim($path, './'), '/');
-    }
 }

@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.2 is the floor composer.json declares; it is tested so the floor
+        # stays true rather than aspirational.
+        php: ['8.2', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: json, curl, mbstring
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ matrix.php }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Install dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Lint
+        working-directory: backend
+        run: find src public bin tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Shell script syntax
+        working-directory: backend
+        run: bash -n bin/smoke.sh
+
+      - name: Unit tests
+        working-directory: backend
+        run: ./vendor/bin/phpunit
+
+  widget:
+    name: Widget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Syntax check
+        working-directory: widget
+        run: node --check src/conserje.js
+
+      - name: Build
+        working-directory: widget
+        run: node build.mjs
+
+      - name: Bundle must inline the stylesheet
+        working-directory: widget
+        run: |
+          if grep -q '__CONSERJE_STYLES__' dist/conserje.js; then
+            echo "The stylesheet placeholder survived the build." >&2
+            exit 1
+          fi
+
+  n8n:
+    name: n8n workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: json, curl, mbstring
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Workflow exports must be valid JSON
+        run: |
+          for file in n8n/workflows/*.json; do
+            node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))" \
+              || { echo "Invalid JSON: $file" >&2; exit 1; }
+            echo "ok $file"
+          done
+
+      - name: Signature contract (PHP backend vs n8n Code node)
+        working-directory: n8n
+        run: npm test
+
+      - name: Compose file must be valid
+        working-directory: n8n
+        run: |
+          cp .env.example .env
+          docker compose config --quiet

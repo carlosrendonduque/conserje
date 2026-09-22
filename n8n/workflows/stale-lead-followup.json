@@ -1,0 +1,228 @@
+{
+  "name": "Conserje - stale lead follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "5cdce7aa-671d-4d0b-98b1-77162e2a937a",
+      "name": "Every weekday at 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.CONSERJE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "1f3187bc-2450-4a54-bc39-454c84edb944",
+      "name": "Read lead sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pick out leads that were logged but never followed up.\n//\n// Runs against every row in the sheet, so it must tolerate blank rows and\n// rows a human has edited by hand -- both are normal in a spreadsheet CRM.\n\nconst STALE_AFTER_DAYS = 2;\nconst MAX_PER_RUN = 25;\n\nconst cutoff = Date.now() - STALE_AFTER_DAYS * 24 * 60 * 60 * 1000;\n\nconst stale = $input.all()\n  .filter((item) => {\n    const row = item.json;\n\n    if (!row || !row.email) {\n      return false;\n    }\n\n    // Only rows nobody has touched. Anything a human moved on to\n    // (\"contacted\", \"won\", \"dropped\") is left alone.\n    if (String(row.status || '').toLowerCase() !== 'new') {\n      return false;\n    }\n\n    const receivedAt = Date.parse(row.receivedAt);\n\n    if (!Number.isFinite(receivedAt)) {\n      return false;\n    }\n\n    return receivedAt < cutoff;\n  })\n  // Oldest first: if the cap bites, the longest-waiting lead is not the one\n  // left waiting another day.\n  .sort((a, b) => Date.parse(a.json.receivedAt) - Date.parse(b.json.receivedAt))\n  .slice(0, MAX_PER_RUN);\n\nreturn stale.map((item) => ({ json: { ...item.json, daysWaiting:\n  Math.floor((Date.now() - Date.parse(item.json.receivedAt)) / 86400000) } }));\n"
+      },
+      "id": "8fc1ad8d-209d-48e1-859e-28bbc0affc94",
+      "name": "Find stale leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e49e7d39-f7a0-48c0-994f-0e6206cfaa0f",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "67017c4c-2db2-4df4-a6c3-05c8733ed9ba",
+      "name": "Anything to chase?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.CONSERJE_FROM_EMAIL }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=Still interested? — {{ $json.site }}",
+        "emailFormat": "text",
+        "text": "=Hi {{ $json.name || 'there' }},\n\nYou got in touch {{ $json.daysWaiting }} days ago about:\n\n{{ $json.need }}\n\nIf it is still live, reply and we will pick it up. If the timing moved, say so and I will check back later instead.",
+        "options": {}
+      },
+      "id": "cd235773-980a-4bed-b749-1f3ce7088f76",
+      "name": "Nudge the lead",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.CONSERJE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "conversationId": "={{ $json.conversationId }}",
+            "status": "chased"
+          },
+          "matchingColumns": [
+            "conversationId"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "83806493-7ab4-4ae3-8ac7-8ae2e120e936",
+      "name": "Mark as chased",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        900,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "033ac69e-964f-4da8-8627-d1b4eba8dbfa",
+      "name": "Nothing to do",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        680,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Every weekday at 09:00": {
+      "main": [
+        [
+          {
+            "node": "Read lead sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read lead sheet": {
+      "main": [
+        [
+          {
+            "node": "Find stale leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find stale leads": {
+      "main": [
+        [
+          {
+            "node": "Anything to chase?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to chase?": {
+      "main": [
+        [
+          {
+            "node": "Nudge the lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing to do",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nudge the lead": {
+      "main": [
+        [
+          {
+            "node": "Mark as chased",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "pinData": {}
+}

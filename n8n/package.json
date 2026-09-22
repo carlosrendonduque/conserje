@@ -1,0 +1,11 @@
+{
+  "name": "conserje-n8n",
+  "version": "0.1.0",
+  "description": "Self-hosted n8n stack and the workflows Conserje dispatches leads into.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

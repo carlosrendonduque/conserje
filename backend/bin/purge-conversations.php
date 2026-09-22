@@ -16,6 +16,7 @@ declare(strict_types=1);
 use Conserje\App;
 use Conserje\Conversation\FileConversationStore;
 use Conserje\Support\Env;
+use Conserje\Support\Path;
 use Conserje\Support\SystemClock;
 
 $baseDir = dirname(__DIR__);
@@ -33,9 +34,9 @@ foreach ($argv as $arg) {
 }
 
 $stateDir = Env::get('CONSERJE_STATE_DIR', './var') ?? './var';
-$stateDir = str_starts_with($stateDir, '/') ? $stateDir : $baseDir . '/' . ltrim($stateDir, './');
+$stateDir = Path::resolve($baseDir, $stateDir);
 
-$store = new FileConversationStore(rtrim($stateDir, '/') . '/conversations', new SystemClock());
+$store = new FileConversationStore($stateDir . '/conversations', new SystemClock());
 $removed = $store->purgeOlderThan($days * 86400);
 
 echo "Removed {$removed} conversation(s) older than {$days} day(s).\n";
