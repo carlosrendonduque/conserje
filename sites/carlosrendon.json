@@ -1,0 +1,33 @@
+{
+  "id": "carlosrendon",
+  "name": "Carlos Rendon",
+  "locale": "es",
+  "model": "claude-opus-5",
+  "allowedOrigins": [
+    "https://REPLACE-WITH-YOUR-DOMAIN.example",
+    "http://localhost:5173",
+    "http://localhost:4173",
+    "http://localhost:8080"
+  ],
+  "greeting": "Hola, soy el asistente de Carlos. ¿En qué estás trabajando?",
+  "businessContext": "Carlos Rendon is an independent software consultant. He builds web applications, AI-powered products, and automation systems: React and TypeScript front ends, Node, Python and PHP back ends, LLM integrations (Anthropic and OpenAI APIs, MCP servers, retrieval and semantic search), and workflow automation with n8n. He has shipped CI/CD pipelines, Docker deployments, and Salesforce integrations. He works remote, directly with founders and small teams, on project work and short retained engagements, and he is comfortable owning a project end to end rather than joining an existing team as an extra pair of hands. He does not do staff augmentation, does not take hourly-only contracts, and does not take design-only work with no build attached. Never quote a price, a start date, or a delivery date: say Carlos will confirm.",
+  "collect": [
+    "What they are trying to build or fix, concretely",
+    "Whether anything already exists or this starts from zero",
+    "When they need it, and what is driving that date",
+    "Roughly what they have budgeted",
+    "A name and an email address"
+  ],
+  "budgetBands": [
+    "under-5k",
+    "5k-15k",
+    "15k-40k",
+    "over-40k"
+  ],
+  "maxTurns": 14,
+  "maxMessageChars": 1200,
+  "requestsPerHour": 60,
+  "webhookUrlEnv": "CONSERJE_WEBHOOK_CARLOSRENDON",
+  "hotScoreThreshold": 70,
+  "warmScoreThreshold": 40
+}

@@ -6,7 +6,7 @@
 # cover from a unit test: routing, the origin allowlist, input validation, and
 # whether anything sensitive leaks into a response body.
 #
-#   bin/smoke.sh https://api.example.com carlos-portfolio https://carlosrendonduque.github.io
+#   bin/smoke.sh https://api.example.com carlosrendon https://carlosrendonduque.github.io
 #
 # Exits non-zero on the first unexpected status, so it works as a deploy gate.
 

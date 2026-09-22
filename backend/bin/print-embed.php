@@ -8,8 +8,8 @@
  * and the backend can never disagree about them. Paste the output into the
  * host page.
  *
- *   php bin/print-embed.php carlos-portfolio
- *   php bin/print-embed.php carlos-portfolio --endpoint=https://api.example.com/chat
+ *   php bin/print-embed.php carlosrendon
+ *   php bin/print-embed.php carlosrendon --endpoint=https://api.example.com/chat
  */
 
 declare(strict_types=1);

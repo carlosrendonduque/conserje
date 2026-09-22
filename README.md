@@ -54,7 +54,8 @@ cp .env.example .env          # add the same CONSERJE_WEBHOOK_SECRET
 docker compose up -d          # http://localhost:5678
 ```
 
-Full walkthrough in [docs/INSTALL.md](docs/INSTALL.md).
+Full walkthrough in [docs/INSTALL.md](docs/INSTALL.md). Putting the widget on a
+page: [docs/EMBEDDING.md](docs/EMBEDDING.md).
 
 ## Adding a site
 
@@ -143,7 +144,7 @@ MIT. See [LICENSE](LICENSE).
 ## Checking a deployment
 
 ```bash
-backend/bin/smoke.sh https://api.example.com carlos-portfolio https://your-site.example
+backend/bin/smoke.sh https://api.example.com carlosrendon https://your-site.example
 ```
 
 Exercises routing, the origin allowlist, input validation, and whether

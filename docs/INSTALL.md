@@ -31,7 +31,7 @@ Start it:
 ```bash
 php -S localhost:8000 -t public
 curl http://localhost:8000/health
-# {"status":"ok","sites":2}
+# {"status":"ok","sites":1}
 ```
 
 Without a webhook URL the backend still works end to end — qualified leads go
@@ -46,7 +46,7 @@ node build.mjs          # writes dist/conserje.js
 node serve-demo.mjs     # http://localhost:8080
 ```
 
-Port 8080 is in `sites/carlos-portfolio.json`'s allowlist. On any other port
+Port 8080 is in `sites/carlosrendon.json`'s allowlist. On any other port
 the backend returns 403 — that is the allowlist working.
 
 ### 3. n8n
@@ -140,7 +140,7 @@ site — the per-site configuration is in the `data-` attributes.
 Generate the snippet rather than writing it by hand:
 
 ```bash
-php backend/bin/print-embed.php carlos-portfolio \
+php backend/bin/print-embed.php carlosrendon \
   --endpoint=https://api.example.com/chat \
   --script=https://cdn.example.com/conserje.js
 ```
