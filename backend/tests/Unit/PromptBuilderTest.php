@@ -91,12 +91,21 @@ final class PromptBuilderTest extends TestCase
     }
 
     #[Test]
-    public function the_budget_enum_offers_the_sites_bands_plus_null(): void
+    public function the_budget_band_is_an_any_of_so_strict_mode_accepts_it(): void
     {
+        // Not a nullable `type` carrying an `enum`: under `strict` the API
+        // rejects that with "Enum value 'a' does not match declared type",
+        // and the failure only shows up as a 400 on a live request.
         $site = SiteFactory::make(['budgetBands' => ['a', 'b']]);
         $schema = $this->builder->leadTool($site)['inputSchema'];
+        $budgetBand = $schema['properties']['budgetBand'];
 
-        self::assertSame(['a', 'b', null], $schema['properties']['budgetBand']['enum']);
+        self::assertArrayNotHasKey('type', $budgetBand);
+        self::assertArrayNotHasKey('enum', $budgetBand);
+        self::assertSame(
+            [['type' => 'string', 'enum' => ['a', 'b']], ['type' => 'null']],
+            $budgetBand['anyOf'],
+        );
     }
 
     #[Test]

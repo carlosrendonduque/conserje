@@ -4,7 +4,8 @@
   "locale": "es",
   "model": "claude-opus-5",
   "allowedOrigins": [
-    "https://REPLACE-WITH-YOUR-DOMAIN.example",
+    "https://carlosrendon.co",
+    "https://www.carlosrendon.co",
     "http://localhost:5173",
     "http://localhost:4173",
     "http://localhost:8080"

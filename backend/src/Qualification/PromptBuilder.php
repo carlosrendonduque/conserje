@@ -141,8 +141,15 @@ final class PromptBuilder
                             . '(for example "next month", "no rush"), otherwise null.',
                     ],
                     'budgetBand' => [
-                        'type' => ['string', 'null'],
-                        'enum' => [...$site->budgetBands, null],
+                        // anyOf rather than a nullable `type` with an `enum`:
+                        // under `strict` the API rejects that combination with
+                        // "Enum value '...' does not match declared type".
+                        // The other nullable fields carry no enum, so the
+                        // plain union is still fine for them.
+                        'anyOf' => [
+                            ['type' => 'string', 'enum' => $site->budgetBands],
+                            ['type' => 'null'],
+                        ],
                         'description' => 'Exactly one budget band label from the system prompt, '
                             . 'or null if budget never came up. Do not invent a label.',
                     ],

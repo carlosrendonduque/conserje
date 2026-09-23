@@ -23,3 +23,9 @@ Thumbs.db
 # Test artifacts
 backend/.phpunit.cache/
 coverage/
+
+# TypeScript server
+server/node_modules/
+server/.env
+server/var/
+server/.netlify/

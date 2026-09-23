@@ -67,7 +67,11 @@ final class WebhookDispatcher
         $response = curl_exec($handle);
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $error = curl_error($handle);
-        curl_close($handle);
+
+        // No curl_close(): since PHP 8.0 the handle is an object freed when it
+        // goes out of scope, and calling it is deprecated as of 8.5 -- which
+        // on a default CLI config prints a warning into the response body.
+        unset($handle);
 
         if ($response === false) {
             throw new WebhookException("Webhook transport failed: {$error}");

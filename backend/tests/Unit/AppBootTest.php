@@ -83,6 +83,11 @@ final class AppBootTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/ANTHROPIC_API_KEY/');
 
-        App::boot(dirname(__DIR__, 2));
+        // Booted from a directory with no .env: on a developer machine the
+        // real backend/.env holds a key, and Env::load would put it straight
+        // back into the environment this test just cleared.
+        mkdir($this->stateDir, 0700, true);
+
+        App::boot($this->stateDir);
     }
 }

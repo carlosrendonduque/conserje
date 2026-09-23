@@ -55,13 +55,16 @@ reads `$env.CONSERJE_WEBHOOK_SECRET`, which is why `docker-compose.yml` sets
 `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`. Pasting the secret into the node would
 put it in the exported JSON in this repository.
 
-If the Code node reports that `crypto` is unavailable, set
-`NODE_FUNCTION_ALLOW_BUILTIN=crypto` in the n8n service environment and
-restart.
+**`crypto` is allow-listed for Code nodes.** The Code node sandbox blocks every
+Node builtin unless it is named in `NODE_FUNCTION_ALLOW_BUILTIN`, which
+`docker-compose.yml` now sets. Without it `Verify signature` throws
+`Module 'crypto' is disallowed`, the webhook returns 500, and the backend
+spools the lead — indistinguishable, from the outside, from a bad secret.
 
 ## Environment the workflows expect
 
-Beyond the secret, set these on the n8n container for the nodes to resolve:
+Beyond the secret, set these in `n8n/.env`. `docker-compose.yml` passes them
+through to the container, where the nodes read them as `$env.NAME`:
 
 ```ini
 TELEGRAM_CHAT_ID=...              # where hot-lead alerts go

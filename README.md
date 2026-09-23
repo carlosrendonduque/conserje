@@ -10,9 +10,9 @@ it, and sends it where it needs to go — a notification for the leads worth
 dropping everything for, a spreadsheet row for the rest.
 
 ```
- Visitor ──▶ Widget ──▶ PHP backend ──▶ Claude
-  (browser)  (shadow    (holds the      (conversation +
-              DOM)       API key)        structured extraction)
+ Visitor ──▶ Widget ──▶ Backend ──▶ Claude
+  (browser)  (shadow    (holds the   (conversation +
+              DOM)       API key)     structured extraction)
                              │
                              ▼
                       signed webhook
@@ -29,7 +29,7 @@ and an opaque session id, and renders what comes back.
 | Directory  | What it holds |
 |------------|---------------|
 | `widget/`  | The embeddable widget. Vanilla JS in a shadow root, no dependencies, 15.5 KB built. |
-| `backend/` | PHP 8.2+. Holds the API key, drives the conversation, scores leads, signs webhooks. |
+| `server/`  | TypeScript on Node 22.6+. Holds the API key, drives the conversation, scores leads, signs webhooks. Deploys as a Netlify Function. |
 | `sites/`   | One JSON file per site. Adding a client is a config file, not a code change. |
 | `n8n/`     | Self-hosted n8n via Docker Compose, plus the workflows as version-controlled JSON. |
 | `docs/`    | Install, architecture, security, and the n8n setup. |
@@ -38,10 +38,10 @@ and an opaque session id, and renders what comes back.
 
 ```bash
 # 1. Backend
-cd backend
-composer install
+cd server
+npm install
 cp .env.example .env          # add your ANTHROPIC_API_KEY
-php -S localhost:8000 -t public
+node --experimental-strip-types --env-file=.env bin/serve.ts
 
 # 2. Widget
 cd ../widget
@@ -81,7 +81,7 @@ Then generate the embed snippet, so the page and the backend cannot disagree
 about the greeting or the locale:
 
 ```bash
-php backend/bin/print-embed.php acme-dental \
+node --experimental-strip-types server/bin/print-embed.ts acme-dental \
   --endpoint=https://api.example.com/chat \
   --script=https://cdn.example.com/conserje.js
 ```
@@ -103,7 +103,7 @@ Each lead gets a 0–100 score, computed on the server from the extracted facts:
 
 The score is computed in code rather than asked for. A model asked to return a
 number will drift between runs; routing rules should be reviewable in a diff
-and covered by tests. See `backend/src/Qualification/LeadScorer.php`.
+and covered by tests. See `server/src/qualification/scorer.ts`.
 
 Thresholds are per site, so "hot" for a dental practice and "hot" for an agency
 can mean different things.
@@ -111,15 +111,19 @@ can mean different things.
 ## Tests
 
 ```bash
-cd backend && ./vendor/bin/phpunit      # 81 tests
-cd n8n && npm test                      # signature contract, PHP vs n8n
+cd server && npm test                   # 89 tests, no build step
+cd n8n    && npm test                   # signature contract, server vs n8n
 ```
 
-The n8n suite is worth a note: the HMAC rule is implemented twice, once in PHP
-and once as JavaScript inside an n8n Code node. The test extracts that Code
-node straight out of the exported workflow JSON and runs it against signatures
-produced by the real PHP class. If either side drifts, CI fails instead of
-leads silently disappearing.
+The server suite needs no toolchain: Node 22.6+ runs the TypeScript directly,
+so `npm test` is the whole story. Storage and the model are behind interfaces
+with in-memory implementations, so nothing reaches the network or a platform.
+
+The n8n suite is worth a note: the HMAC rule is implemented twice, once in the
+server and once as JavaScript inside an n8n Code node. The test extracts that
+Code node straight out of the exported workflow JSON and runs it against
+signatures produced by the real signing module. If either side drifts, CI fails
+instead of leads silently disappearing.
 
 ## Security
 
@@ -132,7 +136,7 @@ The short version:
 - Leads are signed with HMAC-SHA256 over `timestamp.body`, so a captured
   request cannot be replayed.
 - Rate limiting is per site and IP, enforced before any model call.
-- A lead that cannot be delivered is spooled to disk rather than lost.
+- A lead that cannot be delivered is spooled rather than lost.
 
 The long version, including what is deliberately *not* defended against, is in
 [docs/SECURITY.md](docs/SECURITY.md).
@@ -144,10 +148,10 @@ MIT. See [LICENSE](LICENSE).
 ## Checking a deployment
 
 ```bash
-backend/bin/smoke.sh https://api.example.com carlosrendon https://your-site.example
+server/bin/smoke.sh https://api.example.com carlosrendon https://your-site.example
 ```
 
 Exercises routing, the origin allowlist, input validation, and whether
-anything sensitive leaks into a response body — the things a vhost gets wrong
-and a unit test cannot see. Exits non-zero on the first failure, so it works as
-a deploy gate.
+anything sensitive leaks into a response body against a *deployed* URL — the
+things that break between a passing test suite and a live environment. Exits
+non-zero on the first failure, so it works as a deploy gate.

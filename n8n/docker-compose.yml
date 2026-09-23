@@ -55,6 +55,20 @@ services:
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
       CONSERJE_WEBHOOK_SECRET: ${CONSERJE_WEBHOOK_SECRET}
 
+      # `Verify signature` computes an HMAC, and the Code node sandbox blocks
+      # every Node builtin unless it is named here. Without it the workflow
+      # fails with "Module 'crypto' is disallowed" and the webhook 500s --
+      # which looks exactly like a bad signature.
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+
+      # The workflow nodes read these with $env.NAME. n8n resolves nothing it
+      # was not handed, so a name missing here surfaces as an empty Telegram
+      # chat id or a mail sent from nowhere, not as an error.
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      CONSERJE_FROM_EMAIL: ${CONSERJE_FROM_EMAIL:-}
+      CONSERJE_BOOKING_URL: ${CONSERJE_BOOKING_URL:-}
+      CONSERJE_SHEET_ID: ${CONSERJE_SHEET_ID:-}
+
       N8N_DIAGNOSTICS_ENABLED: "false"
       N8N_RUNNERS_ENABLED: "true"
       EXECUTIONS_DATA_PRUNE: "true"

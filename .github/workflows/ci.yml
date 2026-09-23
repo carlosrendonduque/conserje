@@ -6,46 +6,47 @@ on:
   pull_request:
 
 jobs:
-  backend:
-    name: Backend (PHP ${{ matrix.php }})
+  server:
+    name: Server (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # 8.2 is the floor composer.json declares; it is tested so the floor
-        # stays true rather than aspirational.
-        php: ['8.2', '8.4']
+        # 22.6 is the floor package.json declares -- it is the first release
+        # that runs TypeScript without a build step, which is why the tests
+        # need no toolchain. 24 guards against the next LTS breaking that.
+        node: ['22', '24']
     steps:
       - uses: actions/checkout@v4
 
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/setup-node@v4
         with:
-          php-version: ${{ matrix.php }}
-          extensions: json, curl, mbstring
-          coverage: none
-
-      - name: Cache Composer packages
-        uses: actions/cache@v4
-        with:
-          path: backend/vendor
-          key: composer-${{ matrix.php }}-${{ hashFiles('backend/composer.lock') }}
-          restore-keys: composer-${{ matrix.php }}-
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: server/package-lock.json
 
       - name: Install dependencies
-        working-directory: backend
-        run: composer install --prefer-dist --no-progress --no-interaction
+        working-directory: server
+        run: npm ci
 
-      - name: Lint
-        working-directory: backend
-        run: find src public bin tests -name '*.php' -print0 | xargs -0 -n1 php -l
-
-      - name: Shell script syntax
-        working-directory: backend
-        run: bash -n bin/smoke.sh
+      - name: Typecheck
+        working-directory: server
+        run: npm run typecheck
 
       - name: Unit tests
-        working-directory: backend
-        run: ./vendor/bin/phpunit
+        working-directory: server
+        run: npm test
+
+      - name: Site configs must load
+        working-directory: server
+        run: |
+          node --experimental-strip-types -e "
+            import('./src/config/sites.ts').then(({ loadSites }) => {
+              const sites = loadSites();
+              if (sites.ids().length === 0) throw new Error('no sites loaded');
+              console.log('loaded:', sites.ids().join(', '));
+            });
+          "
 
   widget:
     name: Widget
@@ -79,19 +80,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: json, curl, mbstring
-          coverage: none
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Workflow exports must be valid JSON
         run: |
@@ -101,7 +92,13 @@ jobs:
             echo "ok $file"
           done
 
-      - name: Signature contract (PHP backend vs n8n Code node)
+      # The contract test imports the server's signing module directly, so the
+      # server's dependencies have to be present for it to resolve.
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Signature contract (server vs n8n Code node)
         working-directory: n8n
         run: npm test
 

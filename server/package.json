@@ -1,0 +1,25 @@
+{
+  "name": "conserje-server",
+  "version": "0.1.0",
+  "description": "Backend for Conserje: holds the LLM credentials, drives the qualification conversation, and dispatches qualified leads to n8n.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@netlify/blobs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^4.2.5",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
