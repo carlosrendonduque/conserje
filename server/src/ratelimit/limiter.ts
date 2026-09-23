@@ -45,7 +45,16 @@ export class BlobRateLimiter implements RateLimiter {
     const blobKey = createHash('sha256').update(key).digest('hex');
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-      const existing = await this.#store().getWithMetadata(blobKey, { type: 'json' });
+      // Strong consistency is not optional here. Blobs reads are eventually
+      // consistent by default, so a second request moments after the first
+      // reads an empty window, tries to create the key, loses to the entry
+      // that already exists, and after the retries are spent refuses a caller
+      // that was nowhere near the limit. The failure looks like a 429 storm
+      // under light traffic and disappears whenever you try to reproduce it.
+      const existing = await this.#store().getWithMetadata(blobKey, {
+        type: 'json',
+        consistency: 'strong',
+      });
       const now = this.#clock.now();
       const hits = prune(existing?.data, now - windowSeconds);
 

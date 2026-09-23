@@ -42,7 +42,10 @@ export class BlobConversationStore implements ConversationStore {
       return null;
     }
 
-    const raw = await this.#store().get(id, { type: 'json' });
+    // Strong consistency: a stale miss here does not read an old transcript,
+    // it starts a brand new conversation, and the visitor watches the
+    // assistant forget everything they just said.
+    const raw = await this.#store().get(id, { type: 'json', consistency: 'strong' });
 
     if (raw === null || typeof raw !== 'object') {
       return null;
