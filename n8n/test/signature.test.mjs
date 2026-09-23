@@ -255,6 +255,49 @@ test('no node depends on the n8n environment', () => {
   assert.deepEqual(offenders, [], `these nodes read $env: ${offenders}`);
 });
 
+test('nothing downstream of a notification node reads the stale item', () => {
+  // Telegram, email and Sheets nodes replace the item with their own output --
+  // an API receipt, an SMTP envelope. A node after one of them that still
+  // reads $json.lead gets whatever that receipt happened to contain.
+  //
+  // While the notification nodes were deactivated they passed the lead through
+  // untouched, so this was invisible. Turning Telegram on broke the CRM row
+  // with "Invalid time value", because payload.timestamp had become a Telegram
+  // message id. The email nodes had the same bug, still dormant.
+  //
+  // 'Authenticate' is the last node holding the original payload and sits on
+  // every branch, so anything downstream must read from it by name.
+  const REPLACING = new Set(['telegram', 'emailSend', 'googleSheets']);
+  const kindOf = new Map(workflow.nodes.map((n) => [n.name, n.type.split('.').pop()]));
+
+  const tainted = new Set();
+  const frontier = [];
+
+  for (const [source, outputs] of Object.entries(workflow.connections)) {
+    if (REPLACING.has(kindOf.get(source))) {
+      for (const branch of outputs.main ?? []) {
+        for (const link of branch ?? []) frontier.push(link.node);
+      }
+    }
+  }
+
+  while (frontier.length > 0) {
+    const name = frontier.pop();
+    if (tainted.has(name)) continue;
+    tainted.add(name);
+    for (const branch of workflow.connections[name]?.main ?? []) {
+      for (const link of branch ?? []) frontier.push(link.node);
+    }
+  }
+
+  const offenders = workflow.nodes
+    .filter((node) => tainted.has(node.name))
+    .filter((node) => /\$json\.|\$input\.first\(\)/.test(JSON.stringify(node.parameters)))
+    .map((node) => node.name);
+
+  assert.deepEqual(offenders, [], `these read the previous node's item: ${offenders}`);
+});
+
 test('the webhook node has Raw Body enabled', () => {
   const webhook = workflow.nodes.find((node) => node.name === 'Lead webhook');
 

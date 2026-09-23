@@ -147,11 +147,11 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $json.site.notify.fromEmail }}",
-        "toEmail": "={{ $json.lead.email }}",
-        "subject": "=Following up on your message to {{ $json.site.name }}",
+        "fromEmail": "={{ $('Authenticate').first().json.site.notify.fromEmail }}",
+        "toEmail": "={{ $('Authenticate').first().json.lead.email }}",
+        "subject": "=Following up on your message to {{ $('Authenticate').first().json.site.name }}",
         "emailFormat": "text",
-        "text": "=Hi {{ $json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $json.lead.summary }}\n\nGrab a time that suits you and we will go through it:\n{{ $json.site.notify.bookingUrl }}\n\nIf anything above is wrong, just reply to this email.",
+        "text": "=Hi {{ $('Authenticate').first().json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $('Authenticate').first().json.lead.summary }}\n\nGrab a time that suits you and we will go through it:\n{{ $('Authenticate').first().json.site.notify.bookingUrl }}\n\nIf anything above is wrong, just reply to this email.",
         "options": {}
       },
       "id": "87fe45b8-7fc6-42af-a7aa-fdac30731482",
@@ -182,11 +182,11 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $json.site.notify.fromEmail }}",
-        "toEmail": "={{ $json.lead.email }}",
-        "subject": "=Thanks for reaching out to {{ $json.site.name }}",
+        "fromEmail": "={{ $('Authenticate').first().json.site.notify.fromEmail }}",
+        "toEmail": "={{ $('Authenticate').first().json.lead.email }}",
+        "subject": "=Thanks for reaching out to {{ $('Authenticate').first().json.site.name }}",
         "emailFormat": "text",
-        "text": "=Hi {{ $json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $json.lead.summary }}\n\nSomeone will come back to you shortly. If anything above is wrong, just reply to this email.",
+        "text": "=Hi {{ $('Authenticate').first().json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $('Authenticate').first().json.lead.summary }}\n\nSomeone will come back to you shortly. If anything above is wrong, just reply to this email.",
         "options": {}
       },
       "id": "e8eed5fd-aad3-4f4b-abaa-2afb4fbd5a6e",
@@ -211,7 +211,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Flatten the nested payload into one row per lead.\n//\n// The transcript is joined into a single cell rather than dropped: when a\n// lead turns out to be mis-scored, the conversation is the only way to find\n// out why.\n\nconst payload = $input.first().json;\nconst lead = payload.lead || {};\nconst conversation = payload.conversation || {};\n\nconst transcript = (conversation.transcript || [])\n  .map((turn) => `${turn.role === 'user' ? 'Visitor' : 'Assistant'}: ${turn.text}`)\n  .join('\\n');\n\nreturn [{\n  json: {\n    receivedAt: new Date(payload.timestamp * 1000).toISOString(),\n    site: (payload.site || {}).id || '',\n    tier: lead.tier || '',\n    score: lead.score ?? '',\n    name: lead.name || '',\n    email: lead.email || '',\n    phone: lead.phone || '',\n    company: lead.company || '',\n    need: lead.need || '',\n    timeline: lead.timeline || '',\n    budgetBand: lead.budgetBand || '',\n    summary: lead.summary || '',\n    turns: conversation.turns ?? '',\n    conversationId: conversation.id || '',\n    transcript,\n    status: 'new',\n  },\n}]"
+        "jsCode": "// Flatten the nested payload into one row per lead.\n//\n// The transcript is joined into a single cell rather than dropped: when a\n// lead turns out to be mis-scored, the conversation is the only way to find\n// out why.\n\n// Sourced from 'Authenticate', not from whatever ran last.\n//\n// Every node on the way here replaces the item with its own output: a Telegram\n// node returns the API's message receipt, an email node returns the SMTP\n// envelope. Only while those nodes were deactivated did they pass the lead\n// through untouched, which is why reading $input worked right up until the\n// notifications were switched on -- and then failed as \"Invalid time value\",\n// because payload.timestamp was gone.\n//\n// 'Authenticate' is the last node that still holds the original payload, and\n// it is on every branch, so it is the one safe place to read it from.\nconst payload = $('Authenticate').first().json;\nconst lead = payload.lead || {};\nconst conversation = payload.conversation || {};\n\nconst transcript = (conversation.transcript || [])\n  .map((turn) => `${turn.role === 'user' ? 'Visitor' : 'Assistant'}: ${turn.text}`)\n  .join('\\n');\n\nreturn [{\n  json: {\n    receivedAt: new Date(payload.timestamp * 1000).toISOString(),\n    site: (payload.site || {}).id || '',\n    tier: lead.tier || '',\n    score: lead.score ?? '',\n    name: lead.name || '',\n    email: lead.email || '',\n    phone: lead.phone || '',\n    company: lead.company || '',\n    need: lead.need || '',\n    timeline: lead.timeline || '',\n    budgetBand: lead.budgetBand || '',\n    summary: lead.summary || '',\n    turns: conversation.turns ?? '',\n    conversationId: conversation.id || '',\n    transcript,\n    status: 'new',\n  },\n}]"
       },
       "id": "e1a4f0e6-f50c-49a0-bbbb-aaa58364aa27",
       "name": "Flatten for CRM",
