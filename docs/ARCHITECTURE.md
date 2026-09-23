@@ -90,7 +90,7 @@ same judgment from their front desk.
 |---|---|
 | Model call fails | 503 with a `retryable` flag; the visitor's turn is **not** persisted, so a retry replays it rather than duplicating it |
 | n8n unreachable | Lead is spooled to `var/spool/`; the visitor still gets their sign-off |
-| Webhook rejects | Same — spooled, replayable with `bin/retry-spool.php` |
+| Webhook rejects | Same — spooled, retried hourly by the maintenance function |
 | Corrupt session file | Treated as absent; the visitor gets a fresh session instead of a 500 |
 | Rate-limit file unwritable | Fails **closed**; a broken limiter does not become a free pass to a paid API |
 | Boot misconfiguration | 503 with no detail; the real reason goes to the error log, because the message could name an env var or a path |
@@ -98,15 +98,28 @@ same judgment from their front desk.
 ## Layout
 
 ```
-backend/src/
-├── App.php                  wiring
-├── Chat/                    the orchestrator and its errors
-├── Config/                  site configs, loaded and validated once
-├── Conversation/            transcript state and persistence
-├── Http/                    CORS, JSON responses, client IP
-├── Llm/                     the provider seam and the Claude implementation
-├── Qualification/           prompt, tool schema, lead, scoring
-├── RateLimit/               sliding-window limiter
-├── Support/                 clock, env, paths
-└── Webhook/                 payload contract, signing, delivery, spooling
+server/
+├── netlify/functions/
+│   ├── chat.ts              the platform adapter -- four lines over the router
+│   └── maintenance.ts       hourly: replay the spool, purge expired transcripts
+├── bin/                     dev server, embed snippet, deploy smoke test
+└── src/
+    ├── app.ts               wiring, cached per cold start
+    ├── chat/                the orchestrator and its errors
+    ├── config/              site configs, loaded and validated once
+    ├── conversation/        transcript state and its store
+    ├── http/                the router, CORS, JSON responses
+    ├── llm/                 the provider seam and the Claude implementation
+    ├── qualification/       prompt, tool schema, lead, scoring
+    ├── ratelimit/           sliding-window limiter
+    ├── support/             clock, lazy store handles
+    └── webhook/             payload contract, signing, delivery, spooling
 ```
+
+The router is a plain `Request -> Response` function and the platform adapter
+sits outside it, so routing, the origin allowlist, input validation and error
+bodies are all unit-testable without a platform around them.
+
+Storage is behind interfaces with two implementations each: Netlify Blobs in
+production, in-memory for tests and the dev server. That is what lets the
+suite run with no network and no credentials.

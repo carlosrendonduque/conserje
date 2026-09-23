@@ -15,6 +15,7 @@ import { randomBytes } from 'node:crypto';
 import { lazyStore, type LazyStore } from '../support/lazy-store.ts';
 
 import type { SiteConfig } from '../config/site.ts';
+import type { SiteRepository } from '../config/sites.ts';
 import type { Conversation } from '../conversation/conversation.ts';
 import type { Lead } from '../qualification/lead.ts';
 import { buildPayload, type WebhookPayload } from './payload.ts';
@@ -103,4 +104,64 @@ export class LeadDelivery implements LeadDeliverer {
       this.#log(`[conserje] unspooled lead payload: ${JSON.stringify(record)}`);
     }
   }
+}
+
+/**
+ * Re-dispatch everything sitting in the spool.
+ *
+ * Leads land there when n8n is down, misconfigured, or rejecting the payload,
+ * and they are the whole point of the product -- so this runs on a schedule
+ * rather than waiting for someone to notice and run a script. A lead that
+ * still cannot be delivered stays put: the next run tries again.
+ */
+export async function replaySpool(
+  dispatcher: WebhookDispatcher,
+  spool: SpoolReader,
+  sites: SiteRepository,
+  log: (message: string) => void = console.error,
+): Promise<{ delivered: number; failed: number }> {
+  const { blobs } = await spool.list();
+  let delivered = 0;
+  let failed = 0;
+
+  for (const blob of blobs) {
+    const record = (await spool.get(blob.key, { type: 'json' })) as SpooledLead | null;
+
+    if (record === null || typeof record !== 'object' || !('payload' in record)) {
+      continue;
+    }
+
+    // Which variable holds the URL is the site config's to say -- guessing it
+    // from the id would quietly break the moment a site names it differently.
+    const site = sites.get(record.siteId);
+    const url = site === undefined ? undefined : process.env[site.webhookUrlEnv];
+
+    if (typeof url !== 'string' || url.trim() === '') {
+      log(`[conserje] spool: no webhook URL for site '${record.siteId}', leaving ${blob.key} in place`);
+      failed += 1;
+      continue;
+    }
+
+    try {
+      // Signed with a fresh timestamp: the original is long outside the
+      // replay window the receiver enforces, so re-sending it as-is would be
+      // rejected as a replay attack -- which, from the receiver's side, is
+      // exactly what it would look like.
+      await dispatcher.send(url, record.payload, Math.floor(Date.now() / 1000));
+      await spool.delete(blob.key);
+      delivered += 1;
+    } catch (error) {
+      log(`[conserje] spool replay failed for ${blob.key}: ${String((error as Error).message)}`);
+      failed += 1;
+    }
+  }
+
+  return { delivered, failed };
+}
+
+/** What replaySpool needs from a store; a Netlify `Store` satisfies it. */
+export interface SpoolReader {
+  list(): Promise<{ blobs: Array<{ key: string }> }>;
+  get(key: string, options: { type: 'json' }): Promise<unknown>;
+  delete(key: string): Promise<void>;
 }

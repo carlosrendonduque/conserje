@@ -29,7 +29,7 @@ Generate it rather than writing it by hand, so the page and the backend cannot
 disagree about the greeting or the locale:
 
 ```bash
-php backend/bin/print-embed.php your-site-id \
+node --experimental-strip-types server/bin/print-embed.ts your-site-id \
   --endpoint=https://api.example.com/chat \
   --script=https://your-site.example/conserje.js
 ```
@@ -110,7 +110,7 @@ wrong one produces confident wrong answers.
 
 ```
 Landing page   http://localhost:5173   (your dev server)
-Backend        http://localhost:8000   (php -S localhost:8000 -t backend/public)
+Backend        http://localhost:8000   (node --experimental-strip-types server/bin/serve.ts)
 ```
 
 Point `data-endpoint` at `http://localhost:8000/chat` and add your dev server's

@@ -2,41 +2,33 @@
 
 ## Requirements
 
-- PHP 8.2+ with `json`, `curl`, `mbstring`
-- Composer
-- Node 22+ (only to build the widget and run the n8n tests)
-- Docker (only for self-hosted n8n)
+- Node 22.6+ — it runs the TypeScript sources directly, so there is no build
+  step and no toolchain to install
 - An Anthropic API key
+- A Netlify account, to deploy
+- Docker, only if you want to self-host n8n instead of using n8n Cloud
 
 ## Local development
 
 ### 1. Backend
 
 ```bash
-cd backend
-composer install
-cp .env.example .env
-```
-
-Fill in `.env`:
-
-```ini
-ANTHROPIC_API_KEY=sk-ant-...
-CONSERJE_WEBHOOK_SECRET=       # openssl rand -hex 32
-CONSERJE_WEBHOOK_CARLOS_PORTFOLIO=http://localhost:5678/webhook/conserje-lead
-```
-
-Start it:
-
-```bash
-php -S localhost:8000 -t public
+cd server
+npm install
+cp .env.example .env          # add your ANTHROPIC_API_KEY
+node --experimental-strip-types --env-file=.env bin/serve.ts
 curl http://localhost:8000/health
 # {"status":"ok","sites":1}
 ```
 
+The dev server runs the same router, service and prompt as production, with
+two substitutions: state lives in memory instead of Netlify Blobs, and
+undelivered leads are written to `server/var/spool/` where you can read them.
+State therefore lasts as long as the process, which is what you want while
+iterating on a prompt.
+
 Without a webhook URL the backend still works end to end — qualified leads go
-to the spool directory instead of n8n, and `bin/retry-spool.php` replays them
-once a URL exists.
+to the spool instead of n8n.
 
 ### 2. Widget
 
@@ -46,8 +38,8 @@ node build.mjs          # writes dist/conserje.js
 node serve-demo.mjs     # http://localhost:8080
 ```
 
-Port 8080 is in `sites/carlosrendon.json`'s allowlist. On any other port
-the backend returns 403 — that is the allowlist working.
+Port 8080 is in `sites/carlosrendon.json`'s allowlist. On any other port the
+backend returns 403 — that is the allowlist working.
 
 ### 3. n8n
 
@@ -55,120 +47,57 @@ See [N8N.md](N8N.md).
 
 ## Production
 
-### Directory layout
+The backend deploys to Netlify as a function. `netlify.toml` at the repository
+root holds the whole configuration, so the deploy needs no manual build
+settings.
 
-Only `backend/public/` may be reachable over HTTP.
+### First deploy
 
-```
-/srv/conserje/
-├── backend/
-│   ├── public/          ← document root
-│   ├── src/  vendor/  bin/
-│   ├── var/             ← writable, NOT under public/
-│   └── .env             ← 0600
-└── sites/
-```
+1. **Add new project → Import an existing project → GitHub**, and pick this
+   repository. Netlify reads `netlify.toml` and fills in the build settings.
+2. Add the environment variables below *before* the first deploy.
+3. Deploy.
 
-### nginx
+`https://<project>.netlify.app/health` should answer `{"status":"ok","sites":N}`.
 
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name api.example.com;
+### Environment variables
 
-    root /srv/conserje/backend/public;
-    index index.php;
+| Variable | Required | What it is |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | yes | Boot fails without it, and every request answers 503 |
+| `CONSERJE_WEBHOOK_SECRET` | yes | HMAC-SHA256 signing key for outbound leads |
+| `CONSERJE_WEBHOOK_TOKEN` | no | Bearer token for receivers that cannot verify the HMAC — see [N8N.md](N8N.md) |
+| `CONSERJE_WEBHOOK_<SITE>` | no | Where this site's leads go. Named by each site config's `webhookUrlEnv`. Leads spool until it is set |
 
-    location / {
-        try_files $uri /index.php$is_args$args;
-    }
+Mark everything but the webhook URLs as secret. Netlify then keeps the value
+out of build logs and scans deploys for it.
 
-    location ~ \.php$ {
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
-        include fastcgi_params;
-    }
+**Changing a variable does not affect a deployed function.** Netlify injects
+them at deploy time, so a change needs **Deploys → Trigger deploy** to take
+effect. This is the step that gets forgotten.
 
-    # Nothing outside public/ is served, but say so explicitly.
-    location ~ /\. { deny all; }
-}
-```
+### Storage
 
-### Apache
+Conversations, rate-limit windows and the lead spool live in Netlify Blobs.
+Nothing to provision — the stores are created on first write.
 
-`public/.htaccess`:
+Both the rate limiter and the conversation store read with
+`consistency: 'strong'`. Blobs is eventually consistent by default, and with
+the default a second request reads a stale window and the limiter refuses
+callers nowhere near the limit, while a conversation lookup misses and starts
+a fresh transcript mid-chat.
 
-```apache
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [QSA,L]
-</IfModule>
-```
+### Maintenance
 
-Point `DocumentRoot` at `backend/public`, and confirm `AllowOverride All` is
-set for it.
+`netlify/functions/maintenance.ts` runs hourly: it replays spooled leads and
+drops conversations past their TTL. There is no cron to configure.
 
-### Permissions
+### Checking a deployment
 
 ```bash
-chmod 600 backend/.env
-mkdir -p backend/var
-chown www-data:www-data backend/var
-chmod 750 backend/var
+server/bin/smoke.sh https://conserje-api.netlify.app carlosrendon https://carlosrendon.co
 ```
 
-Verify the obvious mistake is not live:
-
-```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://api.example.com/../.env
-# anything other than 403/404 means the document root is wrong
-```
-
-### Behind a proxy or CDN
-
-Set `CONSERJE_TRUST_PROXY=true` **only** when a proxy you control rewrites
-`X-Forwarded-For`. Otherwise any client can hand itself a fresh rate-limit
-bucket per request.
-
-### Hosting the widget
-
-`widget/dist/conserje.js` is a static file. Serve it from the same origin as
-the host site, or any CDN. It contains no secrets and is identical for every
-site — the per-site configuration is in the `data-` attributes.
-
-Generate the snippet rather than writing it by hand:
-
-```bash
-php backend/bin/print-embed.php carlosrendon \
-  --endpoint=https://api.example.com/chat \
-  --script=https://cdn.example.com/conserje.js
-```
-
-#### WordPress
-
-Paste the snippet into **Appearance → Theme File Editor → footer.php** before
-`</body>`, or use a "insert headers and footers" plugin. Nothing else is
-needed: the widget creates its own element and does not touch the page's DOM
-or styles.
-
-### Cron
-
-```cron
-*/5 * * * *  cd /srv/conserje/backend && php bin/retry-spool.php >> var/spool.log 2>&1
-17 4 * * *   cd /srv/conserje/backend && php bin/purge-conversations.php --days=7
-```
-
-The first replays anything n8n was unavailable for. The second deletes
-transcripts past the retention window.
-
-## Troubleshooting
-
-| Symptom | Cause |
-|---|---|
-| 403 on every request | The page's origin is not in the site's `allowedOrigins`, or the `site` query parameter is wrong |
-| 503 on every request | Boot failure — check the PHP error log; usually a missing `ANTHROPIC_API_KEY` or an unreadable `sites/` |
-| 429 immediately | `var/ratelimit` is not writable; the limiter fails closed by design |
-| Leads never arrive in n8n | Check `var/spool/` — each file names the reason it failed |
-| `cacheReadInputTokens` always 0 | Something made the system prompt vary per request; see ARCHITECTURE.md |
-| Widget renders nothing | `data-endpoint` or `data-site` missing; the console says which |
+Exercises routing, the origin allowlist, input validation and whether anything
+sensitive leaks into a response body, against a deployed URL. Exits non-zero on
+the first failure, so it works as a deploy gate.

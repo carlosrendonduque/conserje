@@ -12,7 +12,7 @@ Fill in `.env`:
 ```ini
 POSTGRES_PASSWORD=...
 N8N_ENCRYPTION_KEY=          # openssl rand -hex 32 -- back this up
-CONSERJE_WEBHOOK_SECRET=     # must match backend/.env byte for byte
+CONSERJE_WEBHOOK_SECRET=     # must match the backend's value byte for byte
 ```
 
 ```bash
@@ -124,13 +124,12 @@ until the assistant records a lead. Then check, in order:
 2. **The sheet.** One new row, `status` = `new`.
 3. **Telegram / email**, if the lead scored warm or hot.
 
-If nothing arrives, look in `backend/var/spool/`. Each spooled file names the
-reason delivery failed. Fix it, then:
-
-```bash
-php backend/bin/retry-spool.php --dry-run   # what would be sent
-php backend/bin/retry-spool.php             # send it
-```
+If nothing arrives, the lead is in the spool rather than lost. Each spooled
+record names the reason delivery failed. Locally that is `server/var/spool/`;
+in production it is the `conserje-spool` blob store, and
+`netlify/functions/maintenance.ts` retries it hourly — fix the cause and the
+next run delivers it. The function log line says how many were delivered and
+how many are still waiting.
 
 ## Editing a workflow
 

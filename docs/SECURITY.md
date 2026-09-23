@@ -135,7 +135,7 @@ not a script.
 
 ## Data retention
 
-Transcripts contain whatever visitors typed. `bin/purge-conversations.php`
+Transcripts contain whatever visitors typed. The hourly maintenance function
 deletes them past a retention window; run it daily. Lead data lives wherever
 the n8n workflow puts it, and that retention is the operator's to decide.
 
