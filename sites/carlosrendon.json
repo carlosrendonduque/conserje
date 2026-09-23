@@ -29,6 +29,12 @@
   "maxMessageChars": 1200,
   "requestsPerHour": 60,
   "webhookUrlEnv": "CONSERJE_WEBHOOK_CARLOSRENDON",
+  "notify": {
+    "telegramChatId": "1510781964",
+    "fromEmail": null,
+    "bookingUrl": null,
+    "sheetId": null
+  },
   "hotScoreThreshold": 70,
   "warmScoreThreshold": 40
 }

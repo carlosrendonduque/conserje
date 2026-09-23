@@ -5,7 +5,7 @@
  * the version field is part of the payload and the tests assert the keys.
  */
 
-import type { SiteConfig } from '../config/site.ts';
+import type { NotifyTargets, SiteConfig } from '../config/site.ts';
 import type { Conversation } from '../conversation/conversation.ts';
 import type { Lead } from '../qualification/lead.ts';
 
@@ -15,7 +15,12 @@ export interface WebhookPayload {
   readonly version: number;
   readonly event: 'lead.qualified';
   readonly timestamp: number;
-  readonly site: { readonly id: string; readonly name: string; readonly locale: string };
+  readonly site: {
+    readonly id: string;
+    readonly name: string;
+    readonly locale: string;
+    readonly notify: NotifyTargets;
+  };
   readonly lead: Lead;
   readonly conversation: {
     readonly id: string;
@@ -35,7 +40,7 @@ export function buildPayload(
     version: PAYLOAD_VERSION,
     event: 'lead.qualified',
     timestamp,
-    site: { id: site.id, name: site.name, locale: site.locale },
+    site: { id: site.id, name: site.name, locale: site.locale, notify: site.notify },
     lead,
     conversation: {
       id: conversation.id,

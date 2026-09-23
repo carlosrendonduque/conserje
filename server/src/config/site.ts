@@ -10,6 +10,32 @@ export class ConfigError extends Error {
   override readonly name = 'ConfigError';
 }
 
+/**
+ * Where this site's notifications go.
+ *
+ * These live in the site config rather than the automation's environment for
+ * two reasons. They are per-client data, and per-client data is what
+ * `sites/*.json` is for -- adding a client should stay a config file, not a
+ * config file plus four environment variables on a shared n8n. And n8n Cloud
+ * blocks `$env` in Code nodes and puts Variables behind a paid plan, so a
+ * workflow there cannot read an environment at all; travelling inside the
+ * payload is the one channel that works everywhere.
+ *
+ * None of these is a credential. The bot token, the SMTP password and the
+ * Google OAuth grant stay in n8n, where a credential cannot be read back out.
+ * A chat id or a sheet id only says where to deliver, never how to authorise.
+ */
+export interface NotifyTargets {
+  /** Telegram chat that receives hot and warm alerts. */
+  readonly telegramChatId: string | null;
+  /** From address on outbound mail. */
+  readonly fromEmail: string | null;
+  /** Booking link offered to hot leads. */
+  readonly bookingUrl: string | null;
+  /** Google Sheet used as the lead log. */
+  readonly sheetId: string | null;
+}
+
 export interface SiteConfig {
   readonly id: string;
   readonly name: string;
@@ -29,6 +55,7 @@ export interface SiteConfig {
   readonly webhookUrlEnv: string;
   readonly hotScoreThreshold: number;
   readonly warmScoreThreshold: number;
+  readonly notify: NotifyTargets;
 }
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -106,6 +133,24 @@ export function siteFromJson(raw: unknown): SiteConfig {
     webhookUrlEnv: requireString(record, 'webhookUrlEnv'),
     hotScoreThreshold,
     warmScoreThreshold,
+    notify: notifyFrom(record['notify']),
+  };
+}
+
+/** Absent or malformed entries become null: a missing target is not an error. */
+function notifyFrom(raw: unknown): NotifyTargets {
+  const record = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const read = (key: string): string | null => {
+    const value = record[key];
+
+    return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+  };
+
+  return {
+    telegramChatId: read('telegramChatId'),
+    fromEmail: read('fromEmail'),
+    bookingUrl: read('bookingUrl'),
+    sheetId: read('sheetId'),
   };
 }
 

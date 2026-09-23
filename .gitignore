@@ -25,3 +25,4 @@ server/node_modules/
 server/.env
 server/var/
 server/.netlify/
+.token-temp

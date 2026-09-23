@@ -72,6 +72,14 @@ Drop a JSON file in `sites/`. The filename must match the `id` inside it.
   "collect": ["What is bothering them", "How soon", "A name and a phone number"],
   "budgetBands": ["single-treatment", "full-plan"],
   "webhookUrlEnv": "CONSERJE_WEBHOOK_ACME",
+  // Where this client's notifications go. Not credentials -- those stay in
+  // n8n. Null means that channel is unused.
+  "notify": {
+    "telegramChatId": "123456789",
+    "fromEmail": "hello@acmedental.example",
+    "bookingUrl": "https://cal.com/acme/intro",
+    "sheetId": null
+  },
   "hotScoreThreshold": 70,
   "warmScoreThreshold": 40
 }

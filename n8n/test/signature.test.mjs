@@ -237,6 +237,24 @@ test('every node referenced by name actually exists', () => {
   assert.deepEqual(missing, [], `expressions reference nodes that do not exist: ${missing}`);
 });
 
+test('no node depends on the n8n environment', () => {
+  // $env is blocked in Code nodes on n8n Cloud and cannot be unblocked, and
+  // Variables are a paid feature -- so a node reading $env works on a
+  // self-hosted instance and silently resolves to nothing on Cloud. Sending a
+  // message to an empty chat id fails in a way that looks like a broken
+  // credential. Per-site targets travel in the payload instead.
+  // 'Authenticate' is the one exception and an intentional one: it reads $env
+  // inside a try/catch, after trying $vars, and treats "unavailable" as a
+  // reason to require the token header rather than as a reason to pass. Every
+  // other node would resolve silently to nothing.
+  const offenders = workflow.nodes
+    .filter((node) => node.name !== 'Authenticate')
+    .filter((node) => JSON.stringify(node).includes('$env.'))
+    .map((node) => node.name);
+
+  assert.deepEqual(offenders, [], `these nodes read $env: ${offenders}`);
+});
+
 test('the webhook node has Raw Body enabled', () => {
   const webhook = workflow.nodes.find((node) => node.name === 'Lead webhook');
 

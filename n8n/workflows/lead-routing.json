@@ -130,7 +130,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "chatId": "={{ $json.site.notify.telegramChatId }}",
         "text": "=🔥 Hot lead from {{ $json.site.name }} (score {{ $json.lead.score }})\n\n{{ $json.lead.name || 'No name given' }} — {{ $json.lead.email || $json.lead.phone || 'no contact' }}\nBudget: {{ $json.lead.budgetBand || 'not stated' }} | Timeline: {{ $json.lead.timeline || 'not stated' }}\n\n{{ $json.lead.summary }}",
         "additionalFields": {
           "appendAttribution": false
@@ -147,11 +147,11 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.CONSERJE_FROM_EMAIL }}",
+        "fromEmail": "={{ $json.site.notify.fromEmail }}",
         "toEmail": "={{ $json.lead.email }}",
         "subject": "=Following up on your message to {{ $json.site.name }}",
         "emailFormat": "text",
-        "text": "=Hi {{ $json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $json.lead.summary }}\n\nGrab a time that suits you and we will go through it:\n{{ $env.CONSERJE_BOOKING_URL }}\n\nIf anything above is wrong, just reply to this email.",
+        "text": "=Hi {{ $json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $json.lead.summary }}\n\nGrab a time that suits you and we will go through it:\n{{ $json.site.notify.bookingUrl }}\n\nIf anything above is wrong, just reply to this email.",
         "options": {}
       },
       "id": "87fe45b8-7fc6-42af-a7aa-fdac30731482",
@@ -165,7 +165,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "chatId": "={{ $json.site.notify.telegramChatId }}",
         "text": "=New lead from {{ $json.site.name }} (score {{ $json.lead.score }})\n\n{{ $json.lead.name || 'No name given' }} — {{ $json.lead.email || $json.lead.phone || 'no contact' }}\n\n{{ $json.lead.summary }}",
         "additionalFields": {
           "appendAttribution": false
@@ -182,7 +182,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.CONSERJE_FROM_EMAIL }}",
+        "fromEmail": "={{ $json.site.notify.fromEmail }}",
         "toEmail": "={{ $json.lead.email }}",
         "subject": "=Thanks for reaching out to {{ $json.site.name }}",
         "emailFormat": "text",
@@ -227,7 +227,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "={{ $env.CONSERJE_SHEET_ID }}",
+          "value": "={{ $('Authenticate').first().json.site.notify.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
