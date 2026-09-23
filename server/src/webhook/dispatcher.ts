@@ -17,6 +17,23 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export const SIGNATURE_HEADER = 'X-Conserje-Signature';
 export const TIMESTAMP_HEADER = 'X-Conserje-Timestamp';
 
+/**
+ * Shared bearer token, for receivers that cannot verify an HMAC.
+ *
+ * n8n Cloud blocks the Code node from reading environment variables and puts
+ * Variables behind a paid plan, so a workflow there has no way to reach the
+ * signing secret -- the only place it can hold one is a credential, and
+ * credentials are readable by the Webhook node's Header Auth and by nothing
+ * else. This header is what that checks.
+ *
+ * It is strictly weaker than the signature: anyone holding the token can send
+ * any body, any number of times. Over TLS that leaves only an attacker who
+ * already has the token, which is the same position a leaked signing secret
+ * would put us in. Both headers are always sent, so a receiver that can verify
+ * the signature still should.
+ */
+export const TOKEN_HEADER = 'X-Conserje-Token';
+
 const DEFAULT_TIMEOUT_MS = 5_000;
 const DEFAULT_TOLERANCE_SECONDS = 300;
 
@@ -54,10 +71,12 @@ export function verify(
 
 export class WebhookDispatcher {
   readonly #secret: string;
+  readonly #token: string;
   readonly #timeoutMs: number;
 
-  constructor(secret: string, timeoutMs: number = DEFAULT_TIMEOUT_MS) {
+  constructor(secret: string, token = '', timeoutMs: number = DEFAULT_TIMEOUT_MS) {
     this.#secret = secret;
+    this.#token = token;
     this.#timeoutMs = timeoutMs;
   }
 
@@ -83,6 +102,7 @@ export class WebhookDispatcher {
           'Content-Type': 'application/json',
           [SIGNATURE_HEADER]: sign(body, timestamp, this.#secret),
           [TIMESTAMP_HEADER]: String(timestamp),
+          ...(this.#token === '' ? {} : { [TOKEN_HEADER]: this.#token }),
         },
         body,
         redirect: 'error',

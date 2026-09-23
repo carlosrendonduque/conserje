@@ -26,9 +26,9 @@ const SECRET = 'contract-test-secret';
 const WORKFLOW = join(here, '..', 'workflows', 'lead-routing.json');
 
 const workflow = JSON.parse(readFileSync(WORKFLOW, 'utf8'));
-const verifyNode = workflow.nodes.find((node) => node.name === 'Verify signature');
+const verifyNode = workflow.nodes.find((node) => node.name === 'Authenticate');
 
-assert.ok(verifyNode, 'the lead-routing workflow must contain a "Verify signature" node');
+assert.ok(verifyNode, 'the lead-routing workflow must contain an "Authenticate" node');
 
 /** Compile the node's code exactly as n8n would, in "run once for all items" mode. */
 const verify = new Function('require', '$env', '$vars', '$input', 'Buffer', verifyNode.parameters.jsCode);
@@ -38,12 +38,13 @@ function backendSign(body, timestamp, secret = SECRET) {
   return sign(body, timestamp, secret);
 }
 
-function run({ body, timestamp, signature, secret = SECRET, withBody = true, from = 'env' }) {
+function run({ body, timestamp, signature, secret = SECRET, withBody = true, from = 'env', token }) {
   const item = {
     json: {
       headers: {
         ...(signature === null ? {} : { 'x-conserje-signature': signature }),
         ...(timestamp === null ? {} : { 'x-conserje-timestamp': String(timestamp) }),
+        ...(token === undefined ? {} : { 'x-conserje-token': token }),
       },
     },
   };
@@ -149,12 +150,60 @@ test('a webhook node without Raw Body enabled fails loudly', () => {
   );
 });
 
-test('an unset secret fails loudly instead of accepting everything', () => {
+test('with no secret and no token, nothing is accepted', () => {
+  // A verifier that waves requests along when it cannot verify them is worse
+  // than no verifier, because it looks like one.
   const now = Math.floor(Date.now() / 1000);
 
   assert.throws(
     () => run({ body: payload, timestamp: now, signature: backendSign(payload, now), secret: '' }),
-    /CONSERJE_WEBHOOK_SECRET/,
+    /no CONSERJE_WEBHOOK_SECRET readable and no token header/,
+  );
+});
+
+test('with no secret, the token header stands in for the signature', () => {
+  // The n8n Cloud free-plan path: a Code node cannot read the secret, so the
+  // Webhook node's Header Auth has already checked the token by the time this
+  // runs. The presence of the header is the evidence that it passed.
+  const now = Math.floor(Date.now() / 1000);
+
+  const result = run({
+    body: payload,
+    timestamp: now,
+    signature: backendSign(payload, now),
+    secret: '',
+    token: 'whatever-n8n-already-validated',
+  });
+
+  assert.equal(result[0].json.lead.tier, 'hot');
+});
+
+test('a readable secret is still verified, token or not', () => {
+  // Otherwise sending a token alongside a forged signature would be a way to
+  // opt out of the stronger check.
+  const now = Math.floor(Date.now() / 1000);
+
+  assert.throws(
+    () => run({
+      body: payload,
+      timestamp: now,
+      signature: backendSign(payload, now, 'wrong-secret'),
+      token: 'a-valid-looking-token',
+    }),
+    /bad signature/i,
+  );
+});
+
+test('the webhook node requires authentication', () => {
+  // This is the guard that keeps the fail-open configuration from shipping.
+  // Without Header Auth AND without a readable secret, anyone who learns the
+  // URL can post whatever they like, and the Authenticate node cannot tell.
+  const webhook = workflow.nodes.find((node) => node.name === 'Lead webhook');
+
+  assert.equal(webhook.parameters.authentication, 'headerAuth');
+  assert.ok(
+    webhook.credentials?.httpHeaderAuth,
+    'the webhook node must reference a Header Auth credential',
   );
 });
 

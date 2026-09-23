@@ -36,7 +36,7 @@ values — otherwise n8n registers webhook URLs pointing at localhost.
 ### lead-routing
 
 ```
-Lead webhook → Verify signature → Route by tier ┬─ hot  → Alert me now → Send booking link ─┐
+Lead webhook → Authenticate → Route by tier ┬─ hot  → Alert me now → Send booking link ─┐
                                                 ├─ warm → Alert me quietly → Acknowledge ───┤
                                                 └─ cold → Hold for nurture ─────────────────┤
                                                                                             ▼
@@ -50,10 +50,26 @@ bytes that were sent. n8n's parsed object would re-serialise with different key
 order or spacing and every signature would fail. The contract test asserts this
 setting is still on.
 
-**The secret comes from the environment, not the node.** `Verify signature`
-reads `$env.CONSERJE_WEBHOOK_SECRET`, which is why `docker-compose.yml` sets
-`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`. Pasting the secret into the node would
-put it in the exported JSON in this repository.
+**The credential never lives in the node.** How the request is authenticated
+depends on what the host allows the Code node to read:
+
+| Host | Mechanism | Where the secret lives |
+|---|---|---|
+| Self-hosted | HMAC signature | `$env`, from `n8n/.env` via `docker-compose.yml` |
+| n8n Cloud, paid | HMAC signature | `$vars`, Settings → Variables |
+| n8n Cloud, free | Header Auth | a credential, checked by the Webhook node |
+
+`Authenticate` tries the signature first and only falls back to trusting the
+token header, which the Webhook node has already validated by then. With
+neither available it throws: a verifier that waves requests along when it
+cannot verify them is worse than no verifier, because it looks like one. A
+contract test asserts the Webhook node still requires Header Auth, so the
+fail-open configuration cannot ship.
+
+Header Auth is weaker than the signature -- it does not cover the body and
+carries no timestamp, so a captured request stays replayable. Over TLS that
+leaves only an attacker who already holds the token, which is the same position
+a leaked signing secret would create.
 
 **`crypto` is allow-listed for Code nodes.** The Code node sandbox blocks every
 Node builtin unless it is named in `NODE_FUNCTION_ALLOW_BUILTIN`, which
@@ -123,6 +139,6 @@ over the file in `workflows/` so the repository stays the source of truth:
 
 **Workflow → ⋯ → Download**, then commit the result.
 
-If you change `Verify signature`, run `npm test` in `n8n/` before committing —
+If you change `Authenticate`, run `npm test` in `n8n/` before committing —
 it checks that node against the PHP implementation and will catch a drift that
 would otherwise only show up as leads silently disappearing.

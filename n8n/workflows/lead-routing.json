@@ -8,7 +8,8 @@
         "responseMode": "responseNode",
         "options": {
           "rawBody": true
-        }
+        },
+        "authentication": "headerAuth"
       },
       "id": "086a1f08-9c40-445a-b8c6-fcceea0837d5",
       "name": "Lead webhook",
@@ -18,14 +19,19 @@
         -240,
         300
       ],
-      "webhookId": "f5b28cb5-b4d5-49cd-875f-72bb75101003"
+      "webhookId": "f5b28cb5-b4d5-49cd-875f-72bb75101003",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Conserje webhook token"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Verify the HMAC signature before anything downstream touches the payload.\n//\n// The webhook URL is effectively public, so a request that arrives here has\n// proved nothing yet. Signature material is `timestamp.rawBody`, which is why\n// \"Raw Body\" is enabled on the webhook node: re-serialising the parsed object\n// would change key order or spacing and every signature would fail.\n//\n// This mirrors WebhookDispatcher::verify() in the PHP backend. The two are\n// kept in step by n8n/test/signature.test.mjs, which runs this exact code\n// against signatures produced by the PHP implementation.\n\nconst crypto = require('crypto');\n\nconst TOLERANCE_SECONDS = 300;\n\n// Where the secret lives depends on how this n8n is hosted, and a workflow\n// that only knows one of the two breaks silently on the other:\n//\n//   self-hosted  $env, set in n8n/.env and passed through docker-compose.yml\n//   n8n Cloud    $vars, set under Settings -> Variables ($env is blocked and\n//                cannot be unblocked, because you do not own the environment)\n//\n// Both lookups throw rather than return undefined when unavailable, so each\n// one is guarded and whichever answers first wins.\nfunction readSecret() {\n  try {\n    if (typeof $vars !== 'undefined' && $vars.CONSERJE_WEBHOOK_SECRET) {\n      return $vars.CONSERJE_WEBHOOK_SECRET;\n    }\n  } catch (e) {\n    // $vars is not available on this instance; fall through to $env.\n  }\n\n  try {\n    return $env.CONSERJE_WEBHOOK_SECRET;\n  } catch (e) {\n    return undefined;\n  }\n}\n\nconst secret = readSecret();\n\nif (!secret) {\n  throw new Error(\n    'CONSERJE_WEBHOOK_SECRET is not readable on this n8n instance. ' +\n    'Self-hosted: set it in n8n/.env and restart the container. ' +\n    'n8n Cloud: add it under Settings -> Variables.'\n  );\n}\n\nconst item = $input.first();\nconst headers = item.json.headers || {};\nconst signature = headers['x-conserje-signature'];\nconst timestamp = Number(headers['x-conserje-timestamp']);\n\nif (!signature || !Number.isFinite(timestamp)) {\n  throw new Error('Rejected: signature headers are missing.');\n}\n\nif (!item.binary || !item.binary.data) {\n  throw new Error(\n    'Rejected: no raw body. Enable \"Raw Body\" in the webhook node options.'\n  );\n}\n\nconst raw = Buffer.from(item.binary.data.data, 'base64').toString('utf8');\n\n// Reject stale requests: without this, a captured payload stays replayable\n// forever, because its signature never stops being correct.\nconst now = Math.floor(Date.now() / 1000);\n\nif (Math.abs(now - timestamp) > TOLERANCE_SECONDS) {\n  throw new Error('Rejected: timestamp outside tolerance, possible replay.');\n}\n\nconst expected = crypto\n  .createHmac('sha256', secret)\n  .update(`${timestamp}.${raw}`)\n  .digest('hex');\n\nconst expectedBuffer = Buffer.from(expected, 'utf8');\nconst actualBuffer = Buffer.from(String(signature), 'utf8');\n\n// Length is checked first because timingSafeEqual throws on a mismatch.\nif (\n  expectedBuffer.length !== actualBuffer.length ||\n  !crypto.timingSafeEqual(expectedBuffer, actualBuffer)\n) {\n  throw new Error('Rejected: bad signature.');\n}\n\nreturn [{ json: JSON.parse(raw) }];\n"
+        "jsCode": "// Authenticate the request before anything downstream touches the payload.\n//\n// The webhook URL is effectively public, so a request that arrives here has\n// proved nothing yet. There are two ways it can prove something, because the\n// two places this workflow runs do not offer the same tools:\n//\n//   HMAC signature   The strong one. Covers the exact bytes sent and carries a\n//                    timestamp, so a captured request cannot be replayed. Needs\n//                    the shared secret, which a Code node can only reach through\n//                    $env (self-hosted) or $vars (n8n Cloud, paid plans).\n//\n//   Header Auth      The fallback for n8n Cloud on a free plan, where neither of\n//                    those is available. The token lives in a credential, which\n//                    is the only store a Code node cannot read -- so the Webhook\n//                    node checks it, before this code runs, and by the time we\n//                    are here the request is already authenticated.\n//\n// If neither is available this throws rather than passing the payload through.\n// A verifier that waves requests along when it cannot verify them is worse than\n// no verifier, because it looks like one.\n\nconst crypto = require('crypto');\n\nconst TOLERANCE_SECONDS = 300;\n\nfunction readSecret() {\n  try {\n    if (typeof $vars !== 'undefined' && $vars.CONSERJE_WEBHOOK_SECRET) {\n      return $vars.CONSERJE_WEBHOOK_SECRET;\n    }\n  } catch (e) {\n    // $vars is not available on this instance; fall through to $env.\n  }\n\n  try {\n    return $env.CONSERJE_WEBHOOK_SECRET;\n  } catch (e) {\n    return undefined;\n  }\n}\n\nconst item = $input.first();\nconst headers = item.json.headers || {};\n\nif (!item.binary || !item.binary.data) {\n  throw new Error(\n    'Rejected: no raw body. Enable \"Raw Body\" in the webhook node options.'\n  );\n}\n\nconst raw = Buffer.from(item.binary.data.data, 'base64').toString('utf8');\nconst secret = readSecret();\n\nif (secret) {\n  const signature = headers['x-conserje-signature'];\n  const timestamp = Number(headers['x-conserje-timestamp']);\n\n  if (!signature || !Number.isFinite(timestamp)) {\n    throw new Error('Rejected: signature headers are missing.');\n  }\n\n  // Reject stale requests: without this, a captured payload stays replayable\n  // forever, because its signature never stops being correct.\n  const now = Math.floor(Date.now() / 1000);\n\n  if (Math.abs(now - timestamp) > TOLERANCE_SECONDS) {\n    throw new Error('Rejected: timestamp outside tolerance, possible replay.');\n  }\n\n  const expected = crypto\n    .createHmac('sha256', secret)\n    .update(`${timestamp}.${raw}`)\n    .digest('hex');\n\n  const expectedBuffer = Buffer.from(expected, 'utf8');\n  const actualBuffer = Buffer.from(String(signature), 'utf8');\n\n  // Length is checked first because timingSafeEqual throws on a mismatch.\n  if (\n    expectedBuffer.length !== actualBuffer.length ||\n    !crypto.timingSafeEqual(expectedBuffer, actualBuffer)\n  ) {\n    throw new Error('Rejected: bad signature.');\n  }\n} else if (!headers['x-conserje-token']) {\n  // No secret to verify with, and the request did not even carry the token the\n  // Webhook node's Header Auth would have checked -- so nothing authenticated\n  // this request and nothing here can.\n  throw new Error(\n    'Rejected: no CONSERJE_WEBHOOK_SECRET readable and no token header present. ' +\n    'Self-hosted: set the secret in n8n/.env. ' +\n    'n8n Cloud: enable Header Auth on the webhook node with the \"Conserje webhook token\" credential.'\n  );\n}\n\nreturn [{ json: JSON.parse(raw) }];\n"
       },
       "id": "108fc492-5f32-4edc-9066-b9c51bea08ec",
-      "name": "Verify signature",
+      "name": "Authenticate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -267,18 +273,7 @@
       "main": [
         [
           {
-            "node": "Verify signature",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Verify signature": {
-      "main": [
-        [
-          {
-            "node": "Route by tier",
+            "node": "Authenticate",
             "type": "main",
             "index": 0
           }
@@ -381,6 +376,17 @@
         [
           {
             "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authenticate": {
+      "main": [
+        [
+          {
+            "node": "Route by tier",
             "type": "main",
             "index": 0
           }

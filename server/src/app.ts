@@ -69,7 +69,12 @@ export function build(overrides: StorageOverrides = {}): App {
   const conversations = overrides.conversations ?? new BlobConversationStore(clock);
   const delivery =
     overrides.delivery ??
-    new LeadDelivery(new WebhookDispatcher(process.env['CONSERJE_WEBHOOK_SECRET'] ?? ''));
+    new LeadDelivery(
+      new WebhookDispatcher(
+        process.env['CONSERJE_WEBHOOK_SECRET'] ?? '',
+        process.env['CONSERJE_WEBHOOK_TOKEN'] ?? '',
+      ),
+    );
 
   return {
     sites: loadSites(),
