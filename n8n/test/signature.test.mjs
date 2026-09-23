@@ -222,6 +222,21 @@ test('the secret is read from n8n Cloud Variables when $env is blocked', () => {
   assert.equal(result[0].json.event, 'lead.qualified');
 });
 
+test('every node referenced by name actually exists', () => {
+  // Renaming a node updates its connections but leaves $('Old name') inside
+  // expressions untouched. n8n does not complain until the workflow runs, and
+  // then only as "Referenced node doesn't exist" on whichever node holds the
+  // stale reference -- nowhere near the rename that caused it.
+  const names = new Set(workflow.nodes.map((node) => node.name));
+  const referenced = new Set(
+    [...readFileSync(WORKFLOW, 'utf8').matchAll(/\$\('([^']+)'\)/g)].map((m) => m[1]),
+  );
+
+  const missing = [...referenced].filter((name) => !names.has(name));
+
+  assert.deepEqual(missing, [], `expressions reference nodes that do not exist: ${missing}`);
+});
+
 test('the webhook node has Raw Body enabled', () => {
   const webhook = workflow.nodes.find((node) => node.name === 'Lead webhook');
 

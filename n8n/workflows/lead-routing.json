@@ -255,7 +255,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ received: true, tier: $('Verify signature').first().json.lead.tier }) }}",
+        "responseBody": "={{ JSON.stringify({ received: true, tier: $('Authenticate').first().json.lead.tier }) }}",
         "options": {}
       },
       "id": "c1c79322-6a79-40aa-898e-1658f634805a",
