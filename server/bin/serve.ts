@@ -31,7 +31,10 @@ const app = build({
   conversations: new MemoryConversationStore(systemClock),
   rateLimiter: new MemoryRateLimiter(systemClock),
   delivery: new LeadDelivery(
-    new WebhookDispatcher(process.env['CONSERJE_WEBHOOK_SECRET'] ?? ''),
+    new WebhookDispatcher(
+      process.env['CONSERJE_WEBHOOK_SECRET'] ?? '',
+      process.env['CONSERJE_WEBHOOK_TOKEN'] ?? '',
+    ),
     () => ({
       setJSON: async (key, data) => {
         await mkdir(spoolDir, { recursive: true });

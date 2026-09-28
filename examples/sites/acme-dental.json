@@ -1,0 +1,32 @@
+{
+  "id": "acme-dental",
+  "name": "Acme Dental",
+  "locale": "en",
+  "allowedOrigins": [
+    "http://localhost:8080"
+  ],
+  "greeting": "Hi, I'm Acme Dental's assistant. What brings you in?",
+  "businessContext": "Acme Dental is a fictional dental practice used to demo Conserje. It fits crowns, does implants and root canals, and handles dental emergencies the same week. It does not do orthodontics or cosmetic whitening. Never quote a price or offer a specific appointment time: say the front desk will call to confirm.",
+  "collect": [
+    "What is bothering them, or what treatment they are after",
+    "How soon they need to be seen",
+    "Whether they want a single treatment or a full plan",
+    "A name, and a phone number or email"
+  ],
+  "budgetBands": [
+    "single-treatment",
+    "full-plan"
+  ],
+  "maxTurns": 12,
+  "maxMessageChars": 1200,
+  "requestsPerHour": 60,
+  "webhookUrlEnv": "CONSERJE_WEBHOOK_ACME",
+  "notify": {
+    "telegramChatId": "1510781964",
+    "fromEmail": "carlos.rendon.duque@gmail.com",
+    "bookingUrl": null,
+    "sheetId": "1KDqZqvwNafBvn9Ho07PrFcOhHTd8wQxxsDA8RLSSjXE"
+  },
+  "hotScoreThreshold": 70,
+  "warmScoreThreshold": 40
+}

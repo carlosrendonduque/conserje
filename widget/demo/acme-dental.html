@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Dental</title>
+  <!--
+    A fictional practice, for clip 6 of docs/demo.md: the same widget and
+    backend as carlosrendon.co, configured by examples/sites/acme-dental.json.
+    Run the backend with CONSERJE_SITES_DIR=../examples/sites.
+  -->
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6faf9;
+      --fg: #12302b;
+      --muted: #4f6b66;
+      --accent: #0f766e;
+      --line: #d7e6e3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0 16px;
+      background: var(--bg);
+      color: var(--fg);
+      font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    header, main { max-width: 760px; margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; border-bottom: 1px solid var(--line); }
+    .brand { font-weight: 700; font-size: 20px; letter-spacing: -0.01em; }
+    .brand span { color: var(--accent); }
+    nav { color: var(--muted); font-size: 15px; }
+    main { padding: 64px 0 160px; }
+    h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+    .lede { font-size: 19px; color: var(--muted); margin: 0 0 48px; max-width: 34em; }
+    .services { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .service { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .service h2 { font-size: 17px; margin: 0 0 6px; }
+    .service p { margin: 0; color: var(--muted); font-size: 15px; }
+    .fine { margin-top: 48px; font-size: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Acme <span>Dental</span></div>
+    <nav>Mon–Sat · 8am–6pm</nav>
+  </header>
+
+  <main>
+    <h1>Crowns, implants and same-week emergencies.</h1>
+    <p class="lede">
+      Cracked a tooth, lost a filling, or finally ready for that implant? Tell our
+      assistant what is going on and the front desk will call you back.
+    </p>
+
+    <div class="services">
+      <div class="service">
+        <h2>Crowns</h2>
+        <p>Fitted and matched to your teeth.</p>
+      </div>
+      <div class="service">
+        <h2>Implants</h2>
+        <p>From a single tooth to a full plan.</p>
+      </div>
+      <div class="service">
+        <h2>Emergencies</h2>
+        <p>Seen the same week.</p>
+      </div>
+    </div>
+
+    <p class="fine">Acme Dental is fictional. This page exists to demo Conserje.</p>
+  </main>
+
+  <script src="/dist/conserje.js"
+          data-endpoint="http://localhost:8000/chat"
+          data-site="acme-dental"
+          data-title="Acme Dental"
+          data-greeting="Hi, I'm Acme Dental's assistant. What brings you in?"
+          data-locale="en"
+          data-accent="#0f766e"
+          defer></script>
+</body>
+</html>

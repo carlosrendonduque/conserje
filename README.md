@@ -9,20 +9,139 @@ Conserje has a short conversation instead, extracts a structured brief, scores
 it, and sends it where it needs to go — a notification for the leads worth
 dropping everything for, a spreadsheet row for the rest.
 
-```
- Visitor ──▶ Widget ──▶ Backend ──▶ Claude
-  (browser)  (shadow    (holds the   (conversation +
-              DOM)       API key)     structured extraction)
-                             │
-                             ▼
-                      signed webhook
-                             │
-                             ▼
-                           n8n ──▶ notify · email · calendar · CRM
-```
+It is the chat on [carlosrendon.co](https://carlosrendon.co): real visitors,
+real leads, every day.
+
+## See it work
+
+Six short clips, each one feature, recorded against the live deployment and a
+fictional dental practice. The walkthrough that produced them, with every
+message typed, is in [docs/demo.md](docs/demo.md)
+([en español](docs/demo.es.md)).
+
+**1 · The conversation** — a short conversation in place of a form, and the
+assistant asking for exactly what is missing.
+
+**2 · What arrives** — the same lead in three places seconds later: a Telegram
+alert, an email to the visitor, a row in the sheet.
+
+**3 · Hot, warm, cold** — three conversations, three routes through n8n, and a
+score computed in code rather than guessed by the model.
+
+**4 · Their language** — a Spanish site answering an English visitor, and the
+email following the visitor, not the site.
+
+**5 · Nothing is lost** — n8n goes down mid-conversation; the visitor never
+notices, and the lead is delivered exactly once when it comes back.
+
+**6 · A second site** — a dental practice added with one JSON file and no code
+change, routed through the same workflow.
+
+## How it works
 
 The widget never sees a credential, a prompt, or a score. It posts a message
 and an opaque session id, and renders what comes back.
+
+> **[Step through it →](https://carlosrendonduque.github.io/conserje/)**
+> The three paths as an interactive schematic: one turn of conversation,
+> recording a lead, and what happens when n8n is down.
+
+```mermaid
+flowchart LR
+  subgraph browser["Visitor's browser"]
+    widget["Widget<br/>shadow DOM · no key"]
+  end
+
+  subgraph netlify["Netlify"]
+    fn["Conserje<br/>Function"]
+    blobs[("Blobs<br/>sessions · rate limits<br/>lead spool")]
+    cron["maintenance<br/>hourly"]
+  end
+
+  subgraph models["Model"]
+    claude["Claude<br/>conversation ·<br/>record_lead tool"]
+  end
+
+  subgraph n8n["n8n"]
+    auth["Authenticate"]
+    route["Route by tier"]
+  end
+
+  subgraph channels["Where leads land"]
+    telegram["Telegram<br/>alerts you"]
+    email["Email<br/>answers the visitor"]
+    sheet[("Google Sheet<br/>every lead")]
+  end
+
+  widget <-->|"message · session id"| fn
+  fn <--> claude
+  fn <--> blobs
+  fn -->|"signed POST"| auth
+  cron -->|"replay undelivered"| auth
+  blobs --- cron
+  auth --> route
+  route -->|"hot · warm"| telegram
+  route -->|"hot · warm"| email
+  route -->|"all tiers"| sheet
+```
+
+**Two things this drawing is making a point about.** Nothing the model says
+reaches n8n directly: it calls a tool with facts, and the backend turns those
+into a score in code. And there is a way back from every failure — a lead that
+n8n does not accept goes to the spool and is replayed, so an outage costs time,
+not leads.
+
+### What happens when a visitor becomes a lead
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant V as Visitor
+  participant W as Widget
+  participant B as Backend
+  participant C as Claude
+  participant N as n8n
+  participant O as Telegram · Email · Sheet
+
+  V->>W: answers the last question
+  W->>B: POST /chat { session, message }
+  B->>B: origin allowlist · rate limit · turn cap
+  B->>C: site brief + conversation + record_lead tool
+  C-->>B: record_lead { need, budget, timeline, contact, language }
+  B->>C: tool_result
+  C-->>B: sign-off, in the visitor's language
+  B->>B: score in code → tier
+  B->>N: signed POST
+  N->>N: authenticate
+  N-->>B: 200 OK, before acting
+  B-->>W: { reply, done: true }
+  N->>O: alert · email to the lead · CRM row
+```
+
+### What happens when n8n is down
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant B as Backend
+  participant S as Spool (Blobs)
+  participant M as maintenance (hourly)
+  participant N as n8n
+
+  B->>N: signed POST
+  N--xB: no 2xx
+  B->>S: spool { site, reason, payload }
+  Note over B: the visitor still gets their sign-off
+  M->>S: list
+  M->>N: replay, re-signed with the current time
+  alt accepted
+    N-->>M: 2xx
+    M->>S: delete
+  else still failing
+    M->>S: attempts + 1
+    Note over M,S: after 24 attempts → conserje-spool-dead
+  end
+```
 
 ## What is in the box
 
@@ -32,7 +151,8 @@ and an opaque session id, and renders what comes back.
 | `server/`  | TypeScript on Node 22.6+. Holds the API key, drives the conversation, scores leads, signs webhooks. Deploys as a Netlify Function. |
 | `sites/`   | One JSON file per site. Adding a client is a config file, not a code change. |
 | `n8n/`     | Self-hosted n8n via Docker Compose, plus the workflows as version-controlled JSON. |
-| `docs/`    | Install, architecture, security, and the n8n setup. |
+| `docs/`    | Install, architecture, security, the n8n setup, and the demo walkthrough. |
+| `examples/` | A fictional second site, used by the demo. |
 
 ## Quick start
 
@@ -119,7 +239,7 @@ can mean different things.
 ## Tests
 
 ```bash
-cd server && npm test                   # 89 tests, no build step
+cd server && npm test                   # 94 tests, no build step
 cd n8n    && npm test                   # signature contract, server vs n8n
 ```
 
