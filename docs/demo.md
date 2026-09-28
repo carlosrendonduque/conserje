@@ -82,23 +82,23 @@ Run three conversations, resetting between them.
 **Hot** — clip 1's conversation. Scores 85 or more.
 
 **Warm:**
-1. `Hola, tengo una tienda online pequeña y quiero automatizar los correos de estado de pedido y las respuestas de soporte.`
-2. `Usamos Shopify, no tenemos nada desarrollado a medida.`
-3. `El próximo mes sería ideal.`
-4. `El presupuesto es de unos 25 mil dólares.`
-5. `Me llamo Camila Restrepo, mi correo es <test inbox>`
+1. `Hi, I run a small online store and I'd like to automate order status emails and customer support replies.`
+2. `We use Shopify, nothing custom built yet.`
+3. `Next month would be ideal.`
+4. `Budget is around 25k.`
+5. `I'm James Carter, my email is <test inbox>`
 
 **Cold:**
-1. `Hola, solo estoy explorando qué se puede hacer con IA, sin nada concreto todavía.`
-2. `No tengo presupuesto definido ni fecha, solo mirando.`
-3. `Me llamo Pedro, pedro@example.com`
+1. `Hi, I'm just exploring what AI could do for us, nothing concrete yet.`
+2. `No budget or date in mind, just looking.`
+3. `I'm Peter, peter@example.com`
 
 Then open n8n → Executions and click through the three runs:
 
 | Tier | Branch | Telegram | Email | Sheet |
 |---|---|---|---|---|
 | Hot | Alert me now → Reply to hot lead | 🔥 Hot lead | "I will be in touch today" | Row |
-| Warm | Alert me quietly → Reply to lead | New lead | "Te contacto en los próximos días" | Row |
+| Warm | Alert me quietly → Reply to lead | New lead | "I will get back to you in the next few days" | Row |
 | Cold | Hold for nurture | — | — | Row |
 
 **The point:** the model extracts facts; the server scores them. Budget is
@@ -114,9 +114,18 @@ in `server/src/qualification/scorer.ts`, not in a prompt.
 site's.
 
 Carlos's site is configured in Spanish — the widget greets in Spanish — yet
-clip 1 was held in English and the assistant answered in English throughout.
-Open the two emails side by side: Laura's (clip 1) arrived as *Got your
-message*, Camila's (clip 2) as *Recibí tu mensaje*.
+clips 1 and 2 were held in English and the assistant answered in English
+throughout. Now a visitor who writes in Spanish:
+
+1. `Hola, tengo una tienda online pequeña y quiero automatizar los correos de estado de pedido y las respuestas de soporte.`
+2. `Usamos Shopify, no tenemos nada desarrollado a medida.`
+3. `El próximo mes sería ideal.`
+4. `El presupuesto es de unos 25 mil dólares.`
+5. `Me llamo Camila Restrepo, mi correo es <test inbox>`
+
+The assistant answers in Spanish. Then open the two emails side by side:
+Laura's (clip 1) arrived as *Got your message*, Camila's as *Recibí tu
+mensaje*.
 
 **The point:** the assistant records the visitor's language on the lead, and
 the workflow picks the email template from it. One site config serves visitors

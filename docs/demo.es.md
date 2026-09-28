@@ -84,23 +84,23 @@ Haz tres conversaciones, reiniciando entre ellas.
 **Caliente:** la conversación del clip 1. Puntúa 85 o más.
 
 **Tibio:**
-1. `Hola, tengo una tienda online pequeña y quiero automatizar los correos de estado de pedido y las respuestas de soporte.`
-2. `Usamos Shopify, no tenemos nada desarrollado a medida.`
-3. `El próximo mes sería ideal.`
-4. `El presupuesto es de unos 25 mil dólares.`
-5. `Me llamo Camila Restrepo, mi correo es <buzón de prueba>`
+1. `Hi, I run a small online store and I'd like to automate order status emails and customer support replies.`
+2. `We use Shopify, nothing custom built yet.`
+3. `Next month would be ideal.`
+4. `Budget is around 25k.`
+5. `I'm James Carter, my email is <buzón de prueba>`
 
 **Frío:**
-1. `Hola, solo estoy explorando qué se puede hacer con IA, sin nada concreto todavía.`
-2. `No tengo presupuesto definido ni fecha, solo mirando.`
-3. `Me llamo Pedro, pedro@example.com`
+1. `Hi, I'm just exploring what AI could do for us, nothing concrete yet.`
+2. `No budget or date in mind, just looking.`
+3. `I'm Peter, peter@example.com`
 
 Luego abre n8n → Executions y recorre las tres ejecuciones:
 
 | Nivel | Rama | Telegram | Correo | Hoja |
 |---|---|---|---|---|
 | Caliente | Alert me now → Reply to hot lead | 🔥 Hot lead | "I will be in touch today" | Fila |
-| Tibio | Alert me quietly → Reply to lead | New lead | "Te contacto en los próximos días" | Fila |
+| Tibio | Alert me quietly → Reply to lead | New lead | "I will get back to you in the next few days" | Fila |
 | Frío | Hold for nurture | — | — | Fila |
 
 **La idea:** el modelo extrae los datos; el servidor los puntúa. El presupuesto
@@ -116,9 +116,17 @@ reglas están en `server/src/qualification/scorer.ts`, no en un prompt.
 sitio.
 
 El sitio de Carlos está configurado en español —el widget saluda en
-español—, pero el clip 1 fue en inglés y el asistente respondió en inglés todo
-el tiempo. Abre los dos correos: el de Laura (clip 1) llegó como *Got your
-message*, el de Camila (clip 2) como *Recibí tu mensaje*.
+español—, pero los clips 1 y 2 fueron en inglés y el asistente respondió en
+inglés todo el tiempo. Ahora un visitante que escribe en español:
+
+1. `Hola, tengo una tienda online pequeña y quiero automatizar los correos de estado de pedido y las respuestas de soporte.`
+2. `Usamos Shopify, no tenemos nada desarrollado a medida.`
+3. `El próximo mes sería ideal.`
+4. `El presupuesto es de unos 25 mil dólares.`
+5. `Me llamo Camila Restrepo, mi correo es <buzón de prueba>`
+
+El asistente responde en español. Luego abre los dos correos: el de Laura
+(clip 1) llegó como *Got your message*, el de Camila como *Recibí tu mensaje*.
 
 **La idea:** el asistente anota el idioma del visitante en el lead, y el
 workflow elige la plantilla del correo según ese dato. Una sola configuración
