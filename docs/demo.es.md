@@ -12,7 +12,7 @@ Cada sección dice cuáles tener abiertas.
 
 ## Preparación, una sola vez
 
-Los clips 1 a 5 corren contra el despliegue real: el chat de
+Los clips 1 a 4 corren contra el despliegue real: el chat de
 [carlosrendon.co](https://carlosrendon.co), el backend en Netlify y el
 workflow en n8n Cloud. No hace falta levantar nada en local.
 
@@ -26,7 +26,7 @@ Deja estas ventanas listas antes de grabar:
 | La hoja del CRM | Una fila por lead |
 | n8n → *Conserje - lead routing* → Executions | Qué rama tomó cada lead |
 
-El clip 6 corre en local; su preparación está en esa sección.
+El clip 5 corre en local; su preparación está en esa sección.
 
 ## Reiniciar, entre tomas
 
@@ -40,10 +40,10 @@ visitante y hora, suficiente para varias tomas seguidas.
 
 ---
 
-## 1 · La conversación
+## 1 · Una conversación se vuelve un lead
 
-**Muestra:** una conversación corta en lugar de un formulario, y al asistente
-preguntando justo lo que falta.
+**Muestra:** una conversación corta en lugar de un formulario, y el mismo lead
+llegando a tres sitios segundos después de terminar.
 
 Abre el widget y escribe, un mensaje a la vez, esperando cada respuesta:
 
@@ -54,20 +54,8 @@ Abre el widget y escribe, un mensaje a la vez, esperando cada respuesta:
 5. `I'm Laura Gomez, my email is <buzón de prueba>`
 
 Si el asistente pregunta en otro orden, responde con la línea que corresponda.
-Tras el último mensaje, agradece y cierra la conversación.
-
-**La idea:** el asistente pregunta por presupuesto, plazo y contacto porque la
-configuración del sitio los pide, y nunca da un precio ni una fecha porque la
-configuración se lo prohíbe. El visitante no ve nada de la calificación.
-
----
-
-## 2 · Lo que llega
-
-**Muestra:** el mismo lead llegando a tres sitios, segundos después de terminar
-la conversación.
-
-Justo después del clip 1, corta a:
+Tras el último mensaje, agradece y cierra la conversación. Luego, en la misma
+toma, pasa a:
 
 1. **Telegram.** *🔥 Hot lead from Carlos Rendon (score …)*, con el nombre, el
    correo, la banda de presupuesto, el plazo y un resumen escrito para quien
@@ -78,12 +66,15 @@ Justo después del clip 1, corta a:
 3. **La hoja.** Una fila nueva: nivel, puntuación, contacto, la necesidad, la
    transcripción completa y `status` = `new`.
 
-**La idea:** el aviso es para quien tiene que actuar; el correo es para el
-visitante; la hoja es el registro. Nadie tuvo que copiar nada de un lado a otro.
+**La idea:** el asistente pregunta por presupuesto, plazo y contacto porque la
+configuración del sitio los pide, y nunca da un precio ni una fecha porque la
+configuración se lo prohíbe. El visitante no ve nada de la calificación. El
+aviso es para quien tiene que actuar, el correo para el visitante, la hoja es
+el registro, y nadie copió nada de un lado a otro.
 
 ---
 
-## 3 · Caliente, tibio, frío
+## 2 · Caliente, tibio, frío
 
 **Muestra:** el enrutado por puntuación, y que la puntuación se calcula, no se
 adivina.
@@ -119,7 +110,7 @@ reglas están en `server/src/qualification/scorer.ts`, no en un prompt.
 
 ---
 
-## 4 · Su idioma
+## 3 · Su idioma
 
 **Muestra:** el asistente y el correo siguen el idioma del visitante, no el del
 sitio.
@@ -127,7 +118,7 @@ sitio.
 El sitio de Carlos está configurado en español —el widget saluda en
 español—, pero el clip 1 fue en inglés y el asistente respondió en inglés todo
 el tiempo. Abre los dos correos: el de Laura (clip 1) llegó como *Got your
-message*, el de Camila (clip 3) como *Recibí tu mensaje*.
+message*, el de Camila (clip 2) como *Recibí tu mensaje*.
 
 **La idea:** el asistente anota el idioma del visitante en el lead, y el
 workflow elige la plantilla del correo según ese dato. Una sola configuración
@@ -135,7 +126,7 @@ de sitio atiende visitantes en cualquiera de los dos idiomas.
 
 ---
 
-## 5 · No se pierde nada
+## 4 · No se pierde nada
 
 **Muestra:** un lead sobrevive a que n8n esté caído, y se entrega una sola vez
 cuando vuelve.
@@ -160,7 +151,7 @@ que un paso que falle después no puede hacer que el backend lo reenvíe; y tras
 
 ---
 
-## 6 · Un segundo sitio
+## 5 · Un segundo sitio
 
 **Muestra:** añadir un cliente es un archivo de configuración, no un cambio de
 código.

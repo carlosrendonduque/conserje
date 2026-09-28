@@ -11,7 +11,7 @@ cut between windows. Each section says which ones to have open.
 
 ## Setup, once
 
-Clips 1–5 run against the live deployment: the chat on
+Clips 1–4 run against the live deployment: the chat on
 [carlosrendon.co](https://carlosrendon.co), the backend on Netlify, the
 workflow on n8n Cloud. Nothing needs to run locally for them.
 
@@ -25,7 +25,7 @@ Arrange these windows before you start recording:
 | The CRM sheet | One row per lead |
 | n8n → *Conserje - lead routing* → Executions | Which branch each lead took |
 
-Clip 6 runs locally; its own setup is in that section.
+Clip 5 runs locally; its own setup is in that section.
 
 ## Reset, between takes
 
@@ -39,10 +39,10 @@ per visitor per hour, which is enough for several takes in a row.
 
 ---
 
-## 1 · The conversation
+## 1 · A conversation becomes a lead
 
-**Shows:** a short conversation in place of a form, and the assistant asking
-for exactly what is missing.
+**Shows:** a short conversation in place of a form, and the same lead landing
+in three places seconds after it ends.
 
 Open the widget and write, one message at a time, waiting for each reply:
 
@@ -54,19 +54,7 @@ Open the widget and write, one message at a time, waiting for each reply:
 
 If the assistant asks in a different order, answer with whichever line fits.
 After the last message it thanks the visitor and closes the conversation.
-
-**The point:** the assistant asks for budget, timeline and contact because the
-site config lists them, and it never quotes a price or a date, because the
-site config tells it not to. The visitor sees none of the scoring.
-
----
-
-## 2 · What arrives
-
-**Shows:** the same lead landing in three places, seconds after the
-conversation ends.
-
-Straight after clip 1, cut to:
+Then, in the same take, switch to:
 
 1. **Telegram.** *🔥 Hot lead from Carlos Rendon (score …)*, with the name,
    email, budget band, timeline and a summary written for the person who will
@@ -77,13 +65,15 @@ Straight after clip 1, cut to:
 3. **The sheet.** A new row: tier, score, contact, the need, the full
    transcript, and `status` = `new`.
 
-**The point:** the notification is for the person who has to act; the email
-is for the visitor; the sheet is the record. None of them needed anyone to
-copy anything across.
+**The point:** the assistant asks for budget, timeline and contact because the
+site config lists them, and never quotes a price or a date because the config
+tells it not to. The visitor sees none of the scoring. The notification is for
+the person who has to act, the email for the visitor, the sheet is the record —
+and nobody copied anything across.
 
 ---
 
-## 3 · Hot, warm, cold
+## 2 · Hot, warm, cold
 
 **Shows:** routing by score, and that the score is computed, not guessed.
 
@@ -118,7 +108,7 @@ in `server/src/qualification/scorer.ts`, not in a prompt.
 
 ---
 
-## 4 · Their language
+## 3 · Their language
 
 **Shows:** the assistant and the email follow the visitor's language, not the
 site's.
@@ -126,7 +116,7 @@ site's.
 Carlos's site is configured in Spanish — the widget greets in Spanish — yet
 clip 1 was held in English and the assistant answered in English throughout.
 Open the two emails side by side: Laura's (clip 1) arrived as *Got your
-message*, Camila's (clip 3) as *Recibí tu mensaje*.
+message*, Camila's (clip 2) as *Recibí tu mensaje*.
 
 **The point:** the assistant records the visitor's language on the lead, and
 the workflow picks the email template from it. One site config serves visitors
@@ -134,7 +124,7 @@ in either language.
 
 ---
 
-## 5 · Nothing is lost
+## 4 · Nothing is lost
 
 **Shows:** a lead survives n8n being down, and is delivered exactly once when
 it comes back.
@@ -158,7 +148,7 @@ replays a lead is set aside rather than retried forever.
 
 ---
 
-## 6 · A second site
+## 5 · A second site
 
 **Shows:** adding a client is a config file, not a code change.
 

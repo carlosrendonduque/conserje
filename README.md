@@ -14,27 +14,25 @@ real leads, every day.
 
 ## See it work
 
-Six short clips, each one feature, recorded against the live deployment and a
+Five short clips, each one feature, recorded against the live deployment and a
 fictional dental practice. The walkthrough that produced them, with every
 message typed, is in [docs/demo.md](docs/demo.md)
 ([en español](docs/demo.es.md)).
 
-**1 · The conversation** — a short conversation in place of a form, and the
-assistant asking for exactly what is missing.
+**1 · A conversation becomes a lead** — a short conversation in place of a
+form, then the same lead in three places seconds later: a Telegram alert, an
+email to the visitor, a row in the sheet.
 
-**2 · What arrives** — the same lead in three places seconds later: a Telegram
-alert, an email to the visitor, a row in the sheet.
-
-**3 · Hot, warm, cold** — three conversations, three routes through n8n, and a
+**2 · Hot, warm, cold** — three conversations, three routes through n8n, and a
 score computed in code rather than guessed by the model.
 
-**4 · Their language** — a Spanish site answering an English visitor, and the
+**3 · Their language** — a Spanish site answering an English visitor, and the
 email following the visitor, not the site.
 
-**5 · Nothing is lost** — n8n goes down mid-conversation; the visitor never
+**4 · Nothing is lost** — n8n goes down mid-conversation; the visitor never
 notices, and the lead is delivered exactly once when it comes back.
 
-**6 · A second site** — a dental practice added with one JSON file and no code
+**5 · A second site** — a dental practice added with one JSON file and no code
 change, routed through the same workflow.
 
 ## How it works
