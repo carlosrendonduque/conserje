@@ -46,11 +46,11 @@ for exactly what is missing.
 
 Open the widget and write, one message at a time, waiting for each reply:
 
-1. `Hola, tengo una clínica dental y quiero un asistente en mi web que responda preguntas y agende citas automáticamente.`
-2. `Ya tengo una web en WordPress, pero hoy todo lo hacemos por teléfono y WhatsApp a mano.`
-3. `Es urgente, lo necesito esta semana: arranca una campaña de publicidad.`
-4. `Tengo más de 40 mil dólares de presupuesto.`
-5. `Me llamo Laura Gómez, mi correo es <test inbox>`
+1. `Hi, I run a dental clinic and I want an assistant on my website that answers questions and books appointments automatically.`
+2. `I already have a WordPress site, but today we handle everything by phone and WhatsApp, by hand.`
+3. `It's urgent, I need it this week: we're launching an ad campaign.`
+4. `My budget is over 40k dollars.`
+5. `I'm Laura Gomez, my email is <test inbox>`
 
 If the assistant asks in a different order, answer with whichever line fits.
 After the last message it thanks the visitor and closes the conversation.
@@ -71,7 +71,7 @@ Straight after clip 1, cut to:
 1. **Telegram.** *🔥 Hot lead from Carlos Rendon (score …)*, with the name,
    email, budget band, timeline and a summary written for the person who will
    follow up.
-2. **The test inbox.** *Recibí tu mensaje — Carlos Rendon*, sent from Carlos's
+2. **The test inbox.** *Got your message — Carlos Rendon*, sent from Carlos's
    address. It quotes what the visitor asked for, in their words, not the
    internal summary. Replying goes straight to Carlos.
 3. **The sheet.** A new row: tier, score, contact, the need, the full
@@ -92,11 +92,11 @@ Run three conversations, resetting between them.
 **Hot** — clip 1's conversation. Scores 85 or more.
 
 **Warm:**
-1. `Hi, I run a small online store and I'd like to automate order status emails and customer support replies.`
-2. `We use Shopify, nothing custom built yet.`
-3. `Next month would be ideal.`
-4. `Budget is around 25k.`
-5. `I'm James Carter, my email is <test inbox>`
+1. `Hola, tengo una tienda online pequeña y quiero automatizar los correos de estado de pedido y las respuestas de soporte.`
+2. `Usamos Shopify, no tenemos nada desarrollado a medida.`
+3. `El próximo mes sería ideal.`
+4. `El presupuesto es de unos 25 mil dólares.`
+5. `Me llamo Camila Restrepo, mi correo es <test inbox>`
 
 **Cold:**
 1. `Hola, solo estoy explorando qué se puede hacer con IA, sin nada concreto todavía.`
@@ -108,7 +108,7 @@ Then open n8n → Executions and click through the three runs:
 | Tier | Branch | Telegram | Email | Sheet |
 |---|---|---|---|---|
 | Hot | Alert me now → Reply to hot lead | 🔥 Hot lead | "I will be in touch today" | Row |
-| Warm | Alert me quietly → Reply to lead | New lead | "In the next few days" | Row |
+| Warm | Alert me quietly → Reply to lead | New lead | "Te contacto en los próximos días" | Row |
 | Cold | Hold for nurture | — | — | Row |
 
 **The point:** the model extracts facts; the server scores them. Budget is
@@ -123,9 +123,10 @@ in `server/src/qualification/scorer.ts`, not in a prompt.
 **Shows:** the assistant and the email follow the visitor's language, not the
 site's.
 
-Carlos's site is configured in Spanish. Reset and repeat the warm conversation
-from clip 3, in English. The assistant answers in English, and the email
-arrives as *Got your message — Carlos Rendon*.
+Carlos's site is configured in Spanish — the widget greets in Spanish — yet
+clip 1 was held in English and the assistant answered in English throughout.
+Open the two emails side by side: Laura's (clip 1) arrived as *Got your
+message*, Camila's (clip 3) as *Recibí tu mensaje*.
 
 **The point:** the assistant records the visitor's language on the lead, and
 the workflow picks the email template from it. One site config serves visitors

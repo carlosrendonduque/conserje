@@ -47,11 +47,11 @@ preguntando justo lo que falta.
 
 Abre el widget y escribe, un mensaje a la vez, esperando cada respuesta:
 
-1. `Hola, tengo una clínica dental y quiero un asistente en mi web que responda preguntas y agende citas automáticamente.`
-2. `Ya tengo una web en WordPress, pero hoy todo lo hacemos por teléfono y WhatsApp a mano.`
-3. `Es urgente, lo necesito esta semana: arranca una campaña de publicidad.`
-4. `Tengo más de 40 mil dólares de presupuesto.`
-5. `Me llamo Laura Gómez, mi correo es <buzón de prueba>`
+1. `Hi, I run a dental clinic and I want an assistant on my website that answers questions and books appointments automatically.`
+2. `I already have a WordPress site, but today we handle everything by phone and WhatsApp, by hand.`
+3. `It's urgent, I need it this week: we're launching an ad campaign.`
+4. `My budget is over 40k dollars.`
+5. `I'm Laura Gomez, my email is <buzón de prueba>`
 
 Si el asistente pregunta en otro orden, responde con la línea que corresponda.
 Tras el último mensaje, agradece y cierra la conversación.
@@ -72,7 +72,7 @@ Justo después del clip 1, corta a:
 1. **Telegram.** *🔥 Hot lead from Carlos Rendon (score …)*, con el nombre, el
    correo, la banda de presupuesto, el plazo y un resumen escrito para quien
    hará el seguimiento.
-2. **El buzón de prueba.** *Recibí tu mensaje — Carlos Rendon*, enviado desde la
+2. **El buzón de prueba.** *Got your message — Carlos Rendon*, enviado desde la
    dirección de Carlos. Cita lo que pidió el visitante, con sus palabras, no el
    resumen interno. Si responde, le llega directamente a Carlos.
 3. **La hoja.** Una fila nueva: nivel, puntuación, contacto, la necesidad, la
@@ -93,11 +93,11 @@ Haz tres conversaciones, reiniciando entre ellas.
 **Caliente:** la conversación del clip 1. Puntúa 85 o más.
 
 **Tibio:**
-1. `Hi, I run a small online store and I'd like to automate order status emails and customer support replies.`
-2. `We use Shopify, nothing custom built yet.`
-3. `Next month would be ideal.`
-4. `Budget is around 25k.`
-5. `I'm James Carter, my email is <buzón de prueba>`
+1. `Hola, tengo una tienda online pequeña y quiero automatizar los correos de estado de pedido y las respuestas de soporte.`
+2. `Usamos Shopify, no tenemos nada desarrollado a medida.`
+3. `El próximo mes sería ideal.`
+4. `El presupuesto es de unos 25 mil dólares.`
+5. `Me llamo Camila Restrepo, mi correo es <buzón de prueba>`
 
 **Frío:**
 1. `Hola, solo estoy explorando qué se puede hacer con IA, sin nada concreto todavía.`
@@ -108,8 +108,8 @@ Luego abre n8n → Executions y recorre las tres ejecuciones:
 
 | Nivel | Rama | Telegram | Correo | Hoja |
 |---|---|---|---|---|
-| Caliente | Alert me now → Reply to hot lead | 🔥 Hot lead | "Te escribo hoy mismo" | Fila |
-| Tibio | Alert me quietly → Reply to lead | New lead | "En los próximos días" | Fila |
+| Caliente | Alert me now → Reply to hot lead | 🔥 Hot lead | "I will be in touch today" | Fila |
+| Tibio | Alert me quietly → Reply to lead | New lead | "Te contacto en los próximos días" | Fila |
 | Frío | Hold for nurture | — | — | Fila |
 
 **La idea:** el modelo extrae los datos; el servidor los puntúa. El presupuesto
@@ -124,9 +124,10 @@ reglas están en `server/src/qualification/scorer.ts`, no en un prompt.
 **Muestra:** el asistente y el correo siguen el idioma del visitante, no el del
 sitio.
 
-El sitio de Carlos está configurado en español. Reinicia y repite la
-conversación tibia del clip 3, en inglés. El asistente responde en inglés, y el
-correo llega como *Got your message — Carlos Rendon*.
+El sitio de Carlos está configurado en español —el widget saluda en
+español—, pero el clip 1 fue en inglés y el asistente respondió en inglés todo
+el tiempo. Abre los dos correos: el de Laura (clip 1) llegó como *Got your
+message*, el de Camila (clip 3) como *Recibí tu mensaje*.
 
 **La idea:** el asistente anota el idioma del visitante en el lead, y el
 workflow elige la plantilla del correo según ese dato. Una sola configuración
