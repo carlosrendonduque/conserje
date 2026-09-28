@@ -24,6 +24,13 @@ describe('Lead', () => {
     assert.equal(lead.summary, 'A shop');
   });
 
+  test('the language is reduced to a two-letter code or dropped', () => {
+    assert.equal(build({ need: 'x', language: 'es' }).language, 'es');
+    assert.equal(build({ need: 'x', language: ' EN-us ' }).language, 'en');
+    assert.equal(build({ need: 'x', language: '4' }).language, null);
+    assert.equal(build({ need: 'x' }).language, null);
+  });
+
   test('a syntactically invalid address is dropped rather than propagated', () => {
     // Downstream automation would bounce on it anyway, and a half-valid
     // address in a CRM is worse than an empty field.

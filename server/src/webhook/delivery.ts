@@ -41,7 +41,19 @@ export interface SpooledLead {
   readonly reason: string;
   readonly spooledAt: number;
   readonly payload: WebhookPayload;
+  /** Failed replays so far; absent on records spooled before it existed. */
+  readonly attempts?: number;
 }
+
+/**
+ * How many hourly replays a lead gets before it is set aside.
+ *
+ * Without a cap, a receiver that acts on the lead and then fails to answer 2xx
+ * -- a slow step past the dispatch timeout, a node that errors after the alert
+ * went out -- gets the same lead every hour, forever. A day of retries covers
+ * any outage worth waiting out; past that it needs a person, not a scheduler.
+ */
+export const MAX_REPLAY_ATTEMPTS = 24;
 
 export class LeadDelivery implements LeadDeliverer {
   readonly #dispatcher: WebhookDispatcher;
@@ -112,17 +124,38 @@ export class LeadDelivery implements LeadDeliverer {
  * Leads land there when n8n is down, misconfigured, or rejecting the payload,
  * and they are the whole point of the product -- so this runs on a schedule
  * rather than waiting for someone to notice and run a script. A lead that
- * still cannot be delivered stays put: the next run tries again.
+ * still cannot be delivered stays put and the next run tries again, up to
+ * MAX_REPLAY_ATTEMPTS; after that it moves to `deadLetters`, where it stays
+ * recoverable but stops being re-sent.
  */
 export async function replaySpool(
   dispatcher: WebhookDispatcher,
-  spool: SpoolReader,
+  spool: SpoolStore,
+  deadLetters: SpoolSink,
   sites: SiteRepository,
   log: (message: string) => void = console.error,
-): Promise<{ delivered: number; failed: number }> {
+): Promise<{ delivered: number; failed: number; abandoned: number }> {
   const { blobs } = await spool.list();
   let delivered = 0;
   let failed = 0;
+  let abandoned = 0;
+
+  const recordFailure = async (key: string, record: SpooledLead, reason: string): Promise<void> => {
+    const attempts = (record.attempts ?? 0) + 1;
+    const updated: SpooledLead = { ...record, reason, attempts };
+
+    if (attempts < MAX_REPLAY_ATTEMPTS) {
+      await spool.setJSON(key, updated);
+      failed += 1;
+
+      return;
+    }
+
+    await deadLetters.setJSON(key, updated);
+    await spool.delete(key);
+    log(`[conserje] spool: giving up on ${key} after ${attempts} attempts: ${reason}`);
+    abandoned += 1;
+  };
 
   for (const blob of blobs) {
     const record = (await spool.get(blob.key, { type: 'json' })) as SpooledLead | null;
@@ -137,8 +170,8 @@ export async function replaySpool(
     const url = site === undefined ? undefined : process.env[site.webhookUrlEnv];
 
     if (typeof url !== 'string' || url.trim() === '') {
-      log(`[conserje] spool: no webhook URL for site '${record.siteId}', leaving ${blob.key} in place`);
-      failed += 1;
+      log(`[conserje] spool: no webhook URL for site '${record.siteId}' (${blob.key})`);
+      await recordFailure(blob.key, record, `no webhook URL for site '${record.siteId}'`);
       continue;
     }
 
@@ -151,16 +184,18 @@ export async function replaySpool(
       await spool.delete(blob.key);
       delivered += 1;
     } catch (error) {
-      log(`[conserje] spool replay failed for ${blob.key}: ${String((error as Error).message)}`);
-      failed += 1;
+      const reason = String((error as Error).message);
+
+      log(`[conserje] spool replay failed for ${blob.key}: ${reason}`);
+      await recordFailure(blob.key, record, reason);
     }
   }
 
-  return { delivered, failed };
+  return { delivered, failed, abandoned };
 }
 
 /** What replaySpool needs from a store; a Netlify `Store` satisfies it. */
-export interface SpoolReader {
+export interface SpoolStore extends SpoolSink {
   list(): Promise<{ blobs: Array<{ key: string }> }>;
   get(key: string, options: { type: 'json' }): Promise<unknown>;
   delete(key: string): Promise<void>;

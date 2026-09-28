@@ -125,6 +125,12 @@ export function leadTool(site: SiteConfig): Tool {
             'When they want this to happen, in their own words (for example "next month", ' +
             '"no rush"), otherwise null.',
         },
+        language: {
+          type: ['string', 'null'],
+          description:
+            'Two-letter ISO 639-1 code of the language the visitor wrote in (for example "es", ' +
+            '"en"), otherwise null. The follow-up email is sent in this language.',
+        },
         budgetBand: {
           // anyOf rather than a nullable `type` carrying an `enum`: under
           // `strict` the API rejects that combination with "Enum value '...'
@@ -136,7 +142,17 @@ export function leadTool(site: SiteConfig): Tool {
             'came up. Do not invent a label.',
         },
       },
-      required: ['need', 'summary', 'name', 'email', 'phone', 'company', 'timeline', 'budgetBand'],
+      required: [
+        'need',
+        'summary',
+        'name',
+        'email',
+        'phone',
+        'company',
+        'timeline',
+        'language',
+        'budgetBand',
+      ],
     },
   } as Tool;
 }

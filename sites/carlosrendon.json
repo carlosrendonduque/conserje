@@ -31,7 +31,7 @@
   "webhookUrlEnv": "CONSERJE_WEBHOOK_CARLOSRENDON",
   "notify": {
     "telegramChatId": "1510781964",
-    "fromEmail": null,
+    "fromEmail": "carlos.rendon.duque@gmail.com",
     "bookingUrl": null,
     "sheetId": "1KDqZqvwNafBvn9Ho07PrFcOhHTd8wQxxsDA8RLSSjXE"
   },

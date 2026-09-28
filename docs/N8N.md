@@ -36,14 +36,21 @@ values — otherwise n8n registers webhook URLs pointing at localhost.
 ### lead-routing
 
 ```
-Lead webhook → Authenticate → Route by tier ┬─ hot  → Alert me now → Send booking link ─┐
-                                                ├─ warm → Alert me quietly → Acknowledge ───┤
-                                                └─ cold → Hold for nurture ─────────────────┤
-                                                                                            ▼
-                                             Respond OK ← Append to CRM sheet ← Flatten for CRM
+Lead webhook → Authenticate → Respond OK → Route by tier ┬─ hot  → Alert me now → Reply to hot lead ──┐
+                                                             ├─ warm → Alert me quietly → Reply to lead ──┤
+                                                             └─ cold → Hold for nurture ─────────────────┤
+                                                                                                         ▼
+                                                                   Append to CRM sheet ← Flatten for CRM
 ```
 
-Two things about this workflow are load-bearing:
+Three things about this workflow are load-bearing:
+
+**It answers before it acts.** The backend treats anything but a prompt 2xx as
+a failed delivery and replays the lead from its spool every hour. If the
+response waited for the alerts, the email and the sheet, a slow or failing step
+after the Telegram alert would re-send that alert hourly. Once Authenticate
+passes, the lead is n8n's; errors past that point show up in n8n's executions,
+not as duplicate notifications.
 
 **Raw Body is enabled on the webhook node.** The signature covers the exact
 bytes that were sent. n8n's parsed object would re-serialise with different key
@@ -128,8 +135,10 @@ If nothing arrives, the lead is in the spool rather than lost. Each spooled
 record names the reason delivery failed. Locally that is `server/var/spool/`;
 in production it is the `conserje-spool` blob store, and
 `netlify/functions/maintenance.ts` retries it hourly — fix the cause and the
-next run delivers it. The function log line says how many were delivered and
-how many are still waiting.
+next run delivers it. After 24 failed replays a lead moves to the
+`conserje-spool-dead` store instead: still recoverable, but no longer re-sent.
+The function log line says how many were delivered, how many are still
+waiting, and how many were set aside.
 
 ## Editing a workflow
 

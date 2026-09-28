@@ -20,6 +20,8 @@ export interface Lead {
   readonly need: string;
   readonly timeline: string | null;
   readonly budgetBand: string | null;
+  /** ISO 639-1 code of the visitor's language, so replies can match it. */
+  readonly language: string | null;
   readonly summary: string;
   readonly score: number;
   readonly tier: Tier;
@@ -75,6 +77,7 @@ export function leadFromToolInput(
     need,
     timeline: text(input, 'timeline', 80),
     budgetBand: text(input, 'budgetBand', 80),
+    language: languageCode(input['language']),
     summary: text(input, 'summary', 1000) ?? need,
     score,
     tier,
@@ -83,6 +86,21 @@ export function leadFromToolInput(
 
 export function hasContact(lead: Lead): boolean {
   return lead.email !== null || lead.phone !== null;
+}
+
+/**
+ * Two lowercase letters or nothing. The code picks an email template in n8n,
+ * so anything else -- "Spanish", "es-CO" -- is normalised or dropped here
+ * rather than left to fall through a template switch.
+ */
+function languageCode(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const code = value.trim().toLowerCase().slice(0, 2);
+
+  return /^[a-z]{2}$/.test(code) ? code : null;
 }
 
 /** Trim, reject non-strings and blanks, and cap length in code points. */

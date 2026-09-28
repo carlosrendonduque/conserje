@@ -25,11 +25,17 @@ export default async (): Promise<Response> => {
     process.env['CONSERJE_WEBHOOK_TOKEN'] ?? '',
   );
 
-  const spool = await replaySpool(dispatcher, getStore('conserje-spool'), loadSites());
+  const spool = await replaySpool(
+    dispatcher,
+    getStore('conserje-spool'),
+    getStore('conserje-spool-dead'),
+    loadSites(),
+  );
   const purged = await new BlobConversationStore(systemClock).purgeOlderThan(CONVERSATION_TTL_SECONDS);
 
   console.log(
     `[conserje] maintenance: ${spool.delivered} leads delivered, ${spool.failed} still spooled, ` +
+      `${spool.abandoned} set aside, ` +
       `${purged} conversations purged`,
   );
 

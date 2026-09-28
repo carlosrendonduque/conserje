@@ -124,7 +124,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        200,
+        420,
         300
       ]
     },
@@ -141,7 +141,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        440,
+        660,
         60
       ]
     },
@@ -149,19 +149,20 @@
       "parameters": {
         "fromEmail": "={{ $('Authenticate').first().json.site.notify.fromEmail }}",
         "toEmail": "={{ $('Authenticate').first().json.lead.email }}",
-        "subject": "=Following up on your message to {{ $('Authenticate').first().json.site.name }}",
+        "subject": "={{ $('Authenticate').first().json.lead.language === 'es' ? 'Recibí tu mensaje' : 'Got your message' }} — {{ $('Authenticate').first().json.site.name }}",
         "emailFormat": "text",
-        "text": "=Hi {{ $('Authenticate').first().json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $('Authenticate').first().json.lead.summary }}\n\nGrab a time that suits you and we will go through it:\n{{ $('Authenticate').first().json.site.notify.bookingUrl }}\n\nIf anything above is wrong, just reply to this email.",
+        "text": "={{ $('Authenticate').first().json.lead.language === 'es' ? 'Hola' : 'Hi' }} {{ $('Authenticate').first().json.lead.name || '' }},\n\n{{ $('Authenticate').first().json.lead.language === 'es' ? 'Gracias por escribir. Esto es lo que entendí de lo que necesitas:' : 'Thanks for getting in touch. Here is what I took down:' }}\n\n{{ $('Authenticate').first().json.lead.need }}\n\n{{ $('Authenticate').first().json.lead.language === 'es' ? 'Te escribo hoy mismo para concretar los siguientes pasos.' : 'I will be in touch today to sort out next steps.' }}\n\n{{ $('Authenticate').first().json.lead.language === 'es' ? 'Si algo de lo anterior no es correcto, responde a este correo y lo ajustamos.' : 'If anything above is wrong, just reply to this email.' }}\n\n{{ $('Authenticate').first().json.site.name }}",
         "options": {}
       },
       "id": "87fe45b8-7fc6-42af-a7aa-fdac30731482",
-      "name": "Send booking link",
+      "name": "Reply to hot lead",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        660,
+        880,
         60
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -176,7 +177,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        440,
+        660,
         300
       ]
     },
@@ -184,19 +185,20 @@
       "parameters": {
         "fromEmail": "={{ $('Authenticate').first().json.site.notify.fromEmail }}",
         "toEmail": "={{ $('Authenticate').first().json.lead.email }}",
-        "subject": "=Thanks for reaching out to {{ $('Authenticate').first().json.site.name }}",
+        "subject": "={{ $('Authenticate').first().json.lead.language === 'es' ? 'Recibí tu mensaje' : 'Got your message' }} — {{ $('Authenticate').first().json.site.name }}",
         "emailFormat": "text",
-        "text": "=Hi {{ $('Authenticate').first().json.lead.name || 'there' }},\n\nThanks for getting in touch. Here is what I took down:\n\n{{ $('Authenticate').first().json.lead.summary }}\n\nSomeone will come back to you shortly. If anything above is wrong, just reply to this email.",
+        "text": "={{ $('Authenticate').first().json.lead.language === 'es' ? 'Hola' : 'Hi' }} {{ $('Authenticate').first().json.lead.name || '' }},\n\n{{ $('Authenticate').first().json.lead.language === 'es' ? 'Gracias por escribir. Esto es lo que entendí de lo que necesitas:' : 'Thanks for getting in touch. Here is what I took down:' }}\n\n{{ $('Authenticate').first().json.lead.need }}\n\n{{ $('Authenticate').first().json.lead.language === 'es' ? 'Te contacto en los próximos días.' : 'I will get back to you in the next few days.' }}\n\n{{ $('Authenticate').first().json.lead.language === 'es' ? 'Si algo de lo anterior no es correcto, responde a este correo y lo ajustamos.' : 'If anything above is wrong, just reply to this email.' }}\n\n{{ $('Authenticate').first().json.site.name }}",
         "options": {}
       },
       "id": "e8eed5fd-aad3-4f4b-abaa-2afb4fbd5a6e",
-      "name": "Acknowledge",
+      "name": "Reply to lead",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        660,
+        880,
         300
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {},
@@ -205,7 +207,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        440,
+        660,
         540
       ]
     },
@@ -218,7 +220,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
+        1120,
         300
       ]
     },
@@ -248,7 +250,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1120,
+        1340,
         300
       ]
     },
@@ -263,7 +265,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1340,
+        200,
         300
       ]
     }
@@ -309,18 +311,7 @@
       "main": [
         [
           {
-            "node": "Send booking link",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send booking link": {
-      "main": [
-        [
-          {
-            "node": "Flatten for CRM",
+            "node": "Reply to hot lead",
             "type": "main",
             "index": 0
           }
@@ -331,18 +322,7 @@
       "main": [
         [
           {
-            "node": "Acknowledge",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Acknowledge": {
-      "main": [
-        [
-          {
-            "node": "Flatten for CRM",
+            "node": "Reply to lead",
             "type": "main",
             "index": 0
           }
@@ -371,7 +351,7 @@
         ]
       ]
     },
-    "Append to CRM sheet": {
+    "Authenticate": {
       "main": [
         [
           {
@@ -382,11 +362,33 @@
         ]
       ]
     },
-    "Authenticate": {
+    "Respond OK": {
       "main": [
         [
           {
             "node": "Route by tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to hot lead": {
+      "main": [
+        [
+          {
+            "node": "Flatten for CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to lead": {
+      "main": [
+        [
+          {
+            "node": "Flatten for CRM",
             "type": "main",
             "index": 0
           }
