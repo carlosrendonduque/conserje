@@ -24,8 +24,13 @@ an n8n outage, and adding a second site.
 form, then the same lead in three places seconds later: a Telegram alert, an
 email to the visitor, a row in the sheet.
 
+https://github.com/user-attachments/assets/510c75e7-bcac-4029-813d-18735f130dbc
+
+
 **2 · Hot, warm, cold** — three conversations, three routes through n8n, and a
 score computed in code rather than guessed by the model.
+
+https://github.com/user-attachments/assets/36d6c60d-0288-46e7-b830-0a5d8b2487cf
 
 ## How it works
 
