@@ -30,12 +30,8 @@ Clip 6 runs locally; its own setup is in that section.
 ## Reset, between takes
 
 A conversation ends when the assistant records a lead, and a finished
-conversation cannot be reopened. To start a fresh one, open the browser
-console on carlosrendon.co and run:
-
-```js
-Conserje.reset()
-```
+conversation cannot be reopened. The widget keeps its session in the tab, so
+closing the tab and opening carlosrendon.co in a new one starts afresh.
 
 Every take creates a real lead: a Telegram alert, an email, a sheet row. Delete
 the test rows from the sheet when you are done. The rate limit is 60 messages
@@ -211,3 +207,24 @@ node build.mjs && node serve-demo.mjs
 **The point:** everything that makes this a dental practice rather than a
 consultancy — what it offers, what to ask, what "hot" means, which origins may
 embed it, where its leads go — lives in one JSON file. The code is shared.
+
+---
+
+## Recording notes
+
+- **Layout.** Split the screen: carlosrendon.co on the left half; on the right
+  half, one browser window with a tab each for Telegram Web, the test inbox,
+  the sheet and n8n Executions. A clip is then one continuous take, switching
+  tabs on the right, with no editing.
+- **The test inbox** can be a plus-address of the sender's Gmail
+  (`name+laura@gmail.com`): it lands in the same inbox but reads as a different
+  recipient.
+- **Before each take:** close the carlosrendon.co tab and open a new one; clear
+  the bot's chat in Telegram; delete the test emails and the test rows.
+- Replies take a few seconds. Keep the wait in — it is honest about how the
+  chat feels — or cut on the send.
+- The assistant's replies are generated, so they differ between takes. If it
+  asks in a different order, answer with whichever scripted line fits.
+- Each section stands alone, so these work as separate short clips rather than
+  one long video. GitHub rejects videos over 10 MB on a free plan; compress
+  longer takes before uploading.

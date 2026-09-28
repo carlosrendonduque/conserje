@@ -31,12 +31,8 @@ El clip 6 corre en local; su preparación está en esa sección.
 ## Reiniciar, entre tomas
 
 Una conversación termina cuando el asistente registra el lead, y una
-conversación terminada no se puede reabrir. Para empezar otra, abre la consola
-del navegador en carlosrendon.co y ejecuta:
-
-```js
-Conserje.reset()
-```
+conversación terminada no se puede reabrir. El widget guarda la sesión en la
+pestaña, así que basta con cerrarla y abrir carlosrendon.co en una nueva.
 
 Cada toma crea un lead real: un aviso en Telegram, un correo y una fila en la
 hoja. Borra las filas de prueba al terminar. El límite es de 60 mensajes por
@@ -215,3 +211,26 @@ node build.mjs && node serve-demo.mjs
 —qué ofrece, qué preguntar, qué significa "caliente", qué orígenes pueden
 embeberlo, adónde van sus leads— vive en un solo archivo JSON. El código es
 compartido.
+
+---
+
+## Notas de grabación
+
+- **Distribución.** Divide la pantalla: carlosrendon.co en la mitad izquierda;
+  en la derecha, una ventana del navegador con una pestaña para Telegram Web,
+  otra para el buzón de prueba, otra para la hoja y otra para n8n Executions.
+  Cada clip es entonces una sola toma continua, cambiando de pestaña a la
+  derecha, sin edición.
+- **El buzón de prueba** puede ser un alias con `+` del Gmail remitente
+  (`nombre+laura@gmail.com`): llega al mismo buzón, pero se ve como otro
+  destinatario.
+- **Antes de cada toma:** cierra la pestaña de carlosrendon.co y abre una
+  nueva; vacía el chat del bot en Telegram; borra los correos y las filas de
+  prueba.
+- Las respuestas tardan unos segundos. Deja la espera —es honesta sobre cómo se
+  siente el chat— o corta al enviar.
+- Las respuestas del asistente se generan, así que cambian entre tomas. Si
+  pregunta en otro orden, responde con la línea del guion que corresponda.
+- Cada sección es independiente, así que funcionan como clips cortos separados
+  y no como un video largo. GitHub rechaza videos de más de 10 MB en el plan
+  gratuito; comprime las tomas largas antes de subirlas.
