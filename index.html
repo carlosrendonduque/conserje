@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A step-through schematic of Conserje: one turn of conversation, recording a lead, and what happens when n8n is down.">
+<meta name="color-scheme" content="light dark">
+<title>Conserje Playbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --surface-sunk: #e4e9ee;
+    --ink: #171b21;
+    --muted: #5b6672;
+    --faint: #8794a1;
+    --line: #d3dae1;
+    --line-strong: #b8c3cd;
+    --signal: #0f766e;
+    --signal-soft: #d3ece8;
+    --guard: #a16207;
+    --guard-soft: #f4e7cd;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1418;
+      --surface: #171e24;
+      --surface-sunk: #121920;
+      --ink: #e6ebf0;
+      --muted: #97a4b1;
+      --faint: #6d7c8a;
+      --line: #27313b;
+      --line-strong: #3a4753;
+      --signal: #2dd4bf;
+      --signal-soft: #10302e;
+      --guard: #d9a441;
+      --guard-soft: #33270f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1418;
+    --surface: #171e24;
+    --surface-sunk: #121920;
+    --ink: #e6ebf0;
+    --muted: #97a4b1;
+    --faint: #6d7c8a;
+    --line: #27313b;
+    --line-strong: #3a4753;
+    --signal: #2dd4bf;
+    --signal-soft: #10302e;
+    --guard: #d9a441;
+    --guard-soft: #33270f;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    width: min(100% - 2rem, 76rem);
+    margin-inline: auto;
+    padding-block: clamp(1.75rem, 4vw, 3rem) 4rem;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 0 0 0.35rem;
+  }
+  h1 {
+    font-size: clamp(1.6rem, 3.4vw, 2.3rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .standfirst {
+    margin: 0;
+    max-width: 34rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  /* ---------- flow tabs ---------- */
+  .tabs {
+    display: flex;
+    gap: 0.4rem;
+    margin: 1.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    flex-wrap: wrap;
+  }
+  .tab {
+    font: 500 0.9rem/1 var(--sans);
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.55rem 1.05rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .tab:hover { border-color: var(--line-strong); color: var(--ink); }
+  .tab[aria-selected="true"] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
+  .tab .count {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    opacity: 0.7;
+  }
+
+  /* ---------- stage ---------- */
+  .stage-scroll {
+    margin-top: 1rem;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    background-image:
+      linear-gradient(var(--surface-sunk) 1px, transparent 1px),
+      linear-gradient(90deg, var(--surface-sunk) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+  }
+  .stage { display: block; width: 100%; min-width: 760px; height: auto; }
+
+  .lane-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    fill: var(--faint);
+  }
+  .edge-base { fill: none; stroke: var(--line-strong); stroke-width: 1.5; stroke-dasharray: 4 5; opacity: 0.85; }
+  .edge-live { fill: none; stroke: var(--signal); stroke-width: 2.5; stroke-linecap: round; }
+  .edge-live.is-guard { stroke: var(--guard); }
+
+  .node rect {
+    fill: var(--surface);
+    stroke: var(--line-strong);
+    stroke-width: 1.5;
+    rx: 8;
+  }
+  .node.is-db rect { rx: 14; }
+  .node.is-lit rect { stroke: var(--signal); stroke-width: 2.5; }
+  .node.is-lit.is-guard rect { stroke: var(--guard); }
+  .node .n-name { font: 600 14px var(--sans); fill: var(--ink); }
+  .node .n-sub { font: 400 11px var(--mono); fill: var(--faint); }
+
+  .token circle { fill: var(--signal); }
+  .token.is-guard circle { fill: var(--guard); }
+  .token text { font: 500 11px var(--mono); fill: var(--bg); }
+
+  .edge-caption {
+    font: 500 12px var(--mono);
+    fill: var(--ink);
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+  }
+
+  /* ---------- controls ---------- */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+  }
+  .btn {
+    font: 500 0.88rem/1 var(--sans);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    padding: 0.6rem 0.95rem;
+    cursor: pointer;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--ink); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-play { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  .counter {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- step rail ---------- */
+  .rail {
+    display: flex;
+    gap: 0.3rem;
+    margin: 1.1rem 0 0;
+    padding: 0 0 0.35rem;
+    list-style: none;
+    overflow-x: auto;
+  }
+  .rail button {
+    font: 500 0.78rem/1 var(--mono);
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    width: 2.1rem;
+    height: 2.1rem;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+  .rail button:hover { border-color: var(--line-strong); color: var(--ink); }
+  .rail button[aria-current="step"] {
+    background: var(--signal);
+    border-color: var(--signal);
+    color: var(--surface);
+  }
+  .rail button.is-done { color: var(--ink); border-color: var(--line-strong); }
+
+  /* ---------- note ---------- */
+  .note {
+    margin-top: 1.1rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 1rem 2rem;
+    align-items: start;
+  }
+  @media (max-width: 720px) { .note { grid-template-columns: 1fr; } }
+  .note h2 {
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.4rem;
+  }
+  .note p { margin: 0; color: var(--muted); max-width: 62ch; }
+  .note .call {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--signal);
+    border-radius: 6px;
+    padding: 0.7rem 0.85rem;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .note .call.is-guard { border-left-color: var(--guard); }
+  .tagline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--guard);
+    background: var(--guard-soft);
+    border-radius: 999px;
+    padding: 0.22rem 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ---------- footer notes ---------- */
+  .after {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 1.5rem 2.5rem;
+  }
+  .after h3 {
+    font-size: 0.78rem;
+    font-family: var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-weight: 500;
+    margin: 0 0 0.45rem;
+  }
+  .after p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  .after a { color: var(--ink); text-underline-offset: 0.2em; }
+
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.001ms !important; }
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Conserje · playbook</p>
+      <h1>What happens to a lead</h1>
+    </div>
+    <p class="standfirst">
+      The widget holds no key, no prompt and no score. The backend talks to Claude,
+      scores what it hears, and hands the lead to n8n, which notifies you, answers
+      the visitor and logs the row. Step through any of the three paths below.
+    </p>
+  </header>
+
+  <ul class="tabs" role="tablist" aria-label="Flow">
+    <li role="presentation">
+      <button class="tab" role="tab" id="tab-turn" aria-controls="panel" aria-selected="true" data-flow="turn">
+        One turn of conversation <span class="count">10 steps</span>
+      </button>
+    </li>
+    <li role="presentation">
+      <button class="tab" role="tab" id="tab-lead" aria-controls="panel" aria-selected="false" data-flow="lead">
+        Recording a lead <span class="count">10 steps</span>
+      </button>
+    </li>
+    <li role="presentation">
+      <button class="tab" role="tab" id="tab-spool" aria-controls="panel" aria-selected="false" data-flow="spool">
+        When n8n is down <span class="count">8 steps</span>
+      </button>
+    </li>
+  </ul>
+
+  <div id="panel" role="tabpanel" aria-labelledby="tab-turn">
+    <div class="stage-scroll">
+      <svg class="stage" viewBox="0 0 1180 470" role="img" aria-labelledby="stage-title">
+        <title id="stage-title">Schematic of Conserje's actors and the path the current step takes</title>
+        <g id="laneLabels"></g>
+        <g id="baseEdges"></g>
+        <path id="liveEdge" class="edge-live" d="" />
+        <g id="nodes"></g>
+        <text id="edgeCaption" class="edge-caption" text-anchor="middle"></text>
+        <g id="token" class="token" opacity="0">
+          <circle r="9"></circle>
+        </g>
+      </svg>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="prev" type="button">← Back</button>
+      <button class="btn btn-play" id="play" type="button">Play</button>
+      <button class="btn" id="next" type="button">Next →</button>
+      <span class="counter" id="counter">Step 1 of 10</span>
+    </div>
+
+    <ol class="rail" id="rail"></ol>
+
+    <div class="note">
+      <div>
+        <span class="tagline" id="tagline" hidden></span>
+        <h2 id="noteTitle">—</h2>
+        <p id="noteBody">—</p>
+      </div>
+      <div class="call" id="noteCall">—</div>
+    </div>
+  </div>
+
+  <div class="after">
+    <div>
+      <h3>Why the score is code</h3>
+      <p>
+        The model extracts facts; the server turns them into a number. A model asked
+        for a score drifts between runs and can be talked into a higher one. Weights in
+        <code>scorer.ts</code> give the same tier for the same answers, and a change to
+        them shows up in a diff.
+      </p>
+    </div>
+    <div>
+      <h3>Why n8n answers first</h3>
+      <p>
+        Anything but a prompt 2xx is a failed delivery, and failed deliveries are
+        replayed. A workflow that alerted you and then failed would be re-sent every
+        hour. So it answers the moment the lead is authenticated, and the replay gives
+        up after a day.
+      </p>
+    </div>
+    <div>
+      <h3>Read the code</h3>
+      <p>
+        <a href="https://github.com/carlosrendonduque/conserje">github.com/carlosrendonduque/conserje</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var NODES = {
+    visitor:  { x: 76,   y: 300, w: 116, h: 58, name: "Visitor",       sub: "on your site" },
+    widget:   { x: 284,  y: 300, w: 150, h: 58, name: "Widget",        sub: "shadow DOM · 15 KB" },
+    backend:  { x: 480,  y: 300, w: 164, h: 58, name: "Conserje",      sub: "Netlify Function" },
+    claude:   { x: 676,  y: 96,  w: 150, h: 58, name: "Claude",        sub: "talks · extracts" },
+    blobs:    { x: 676,  y: 404, w: 168, h: 62, name: "Netlify Blobs", sub: "sessions · spool", db: true },
+    n8n:      { x: 878,  y: 300, w: 150, h: 58, name: "n8n",           sub: "lead routing" },
+    telegram: { x: 1080, y: 96,  w: 150, h: 58, name: "Telegram",      sub: "alerts you" },
+    email:    { x: 1080, y: 236, w: 150, h: 58, name: "Email",         sub: "answers the lead" },
+    sheet:    { x: 1080, y: 392, w: 164, h: 62, name: "Sheet",         sub: "one row per lead", db: true }
+  };
+
+  var LANES = [
+    { x: 76,   label: "Visitor" },
+    { x: 284,  label: "Browser" },
+    { x: 480,  label: "Backend" },
+    { x: 676,  label: "Services" },
+    { x: 878,  label: "Automation" },
+    { x: 1080, label: "Channels" }
+  ];
+
+  var BASE_EDGES = [
+    ["visitor", "widget"], ["widget", "backend"], ["backend", "claude"], ["backend", "blobs"],
+    ["backend", "n8n"], ["n8n", "telegram"], ["n8n", "email"], ["n8n", "sheet"]
+  ];
+
+  var FLOWS = {
+    turn: {
+      label: "One turn of conversation",
+      steps: [
+        { from: "visitor", to: "widget", tag: "a message",
+          title: "The visitor answers a question, not a form",
+          body: "A contact form tells you someone typed an email address. A conversation can find out whether they have a budget, a deadline and a problem you actually solve, one question at a time.",
+          call: "“Tengo una clínica dental y quiero un asistente en mi web…”" },
+        { from: "widget", to: "backend", tag: "POST /chat",
+          title: "The widget sends the message and an opaque id",
+          body: "Nothing else. No key, no prompt, no transcript, no score. A widget that held the conversation could have it rewritten; one that held a score could have it raised.",
+          call: "POST /chat?site=carlosrendon\n{ session, message }" },
+        { from: "backend", to: "backend", tag: "which site", guard: true,
+          title: "The site is looked up, and the origin checked exactly",
+          body: "Each site lists the origins allowed to embed it, with no wildcards. An unknown site and a disallowed origin get the same 403, so the endpoint cannot be used to find out which clients exist.",
+          call: "sites.get(site) · allowedOrigins.includes(origin)" },
+        { from: "backend", to: "backend", tag: "rate limit", guard: true,
+          title: "Rate limited before a cent is spent",
+          body: "Per site and per visitor IP, checked before the model is called. If the limiter itself cannot write, it fails closed: a broken limiter must not become a free pass to a paid API.",
+          call: "allow(`${site}:${ip}`, requestsPerHour, 3600)" },
+        { from: "backend", to: "blobs", tag: "load",
+          title: "The conversation lives on the server",
+          body: "The browser holds a 32-character id and nothing more. The turn cap is checked here, before the model call, because it exists to bound cost and has to bite before the money is spent.",
+          call: "conversations.load(session) · userTurns() < maxTurns" },
+        { from: "backend", to: "claude", tag: "one turn",
+          title: "Claude gets the site's brief and one tool",
+          body: "The system prompt is rendered from the site config alone — what the business does, what to collect, what never to promise — so it is byte-identical for every visitor and read from the prompt cache.",
+          call: "system: site brief · tools: [record_lead]\nmessages: the conversation so far" },
+        { from: "claude", to: "backend", tag: "a reply",
+          title: "Usually, the next question",
+          body: "Most turns end here: the model asks for whatever is still missing. It answers in the visitor's language, whatever the site's default is.",
+          call: "{ reply, leadInput: null }" },
+        { from: "backend", to: "blobs", tag: "save",
+          title: "The turn is saved only once it succeeded",
+          body: "If the model call fails, the visitor's message is not persisted, so a retry replays the same turn instead of recording it twice.",
+          call: "conversation.append(reply) · save()" },
+        { from: "backend", to: "widget", tag: "reply",
+          title: "Back goes the reply, and nothing else",
+          body: "The session id, the text and a done flag. The score, the tier and the extracted facts never reach the browser, where anyone watching the network tab could read them.",
+          call: "{ session, reply, done: false }" },
+        { from: "widget", to: "visitor", tag: "next question",
+          title: "The visitor sees a question",
+          body: "And answers it. A handful of turns later there is enough to brief someone, and the next flow begins.",
+          call: "“¿Para cuándo lo necesitas?”" }
+      ]
+    },
+
+    lead: {
+      label: "Recording a lead",
+      steps: [
+        { from: "claude", to: "backend", tag: "record_lead",
+          title: "The model calls a tool with what it learned",
+          body: "The schema is strict: every field required, nothing extra allowed, and “not given” spelled as null. The payload goes straight into automation, where a missing key is a broken run, not a cosmetic problem.",
+          call: "{ need, summary, name, email, phone,\n  company, timeline, language, budgetBand }" },
+        { from: "backend", to: "claude", tag: "tool_result",
+          title: "The loop is closed, so the goodbye is written, not templated",
+          body: "The backend answers the tool call and asks for one more turn. The sign-off comes from the model in the visitor's own language, rather than from a template that would only ever be right in one.",
+          call: "tool_result: recorded" },
+        { from: "backend", to: "backend", tag: "score", guard: true,
+          title: "The score is computed in code",
+          body: "Budget 45 points, timeline 30, reachability 15, context 10; hot and warm thresholds per site. The same answers always land in the same tier, and the rules are reviewable in a diff.",
+          call: "score(lead, site) → 90 · hot" },
+        { from: "backend", to: "n8n", tag: "signed POST",
+          title: "The lead goes to n8n, signed",
+          body: "An HMAC over timestamp and body, so a captured request cannot be replayed, and a shared token for receivers — like n8n Cloud on a free plan — that can only check a header. Five seconds to answer.",
+          call: "X-Conserje-Signature · X-Conserje-Timestamp\nX-Conserje-Token" },
+        { from: "n8n", to: "n8n", tag: "authenticate", guard: true,
+          title: "n8n checks it before touching the payload",
+          body: "The webhook URL is effectively public. If the workflow cannot verify a request it throws, rather than waving it through: a verifier that passes what it cannot check is worse than none.",
+          call: "Header Auth · Authenticate" },
+        { from: "n8n", to: "backend", tag: "200 OK",
+          title: "It answers first, then acts",
+          body: "Anything but a prompt 2xx counts as a failed delivery and gets replayed. If n8n answered only after the alerts and the email, a step failing late would re-send the alert every hour.",
+          call: "Respond OK · { received: true, tier: 'hot' }" },
+        { from: "backend", to: "widget", tag: "sign-off",
+          title: "The visitor is thanked, and the conversation closes",
+          body: "Nothing on their side says whether delivery worked. They did their part; what happens downstream is not their problem.",
+          call: "{ session, reply, done: true }" },
+        { from: "n8n", to: "telegram", tag: "hot → alert",
+          title: "Hot leads interrupt you; warm ones do not",
+          body: "Hot goes out straight away, warm quietly, cold not at all. The chat id travels in the payload from the site config, because n8n Cloud has no environment to read it from.",
+          call: "🔥 Hot lead from Carlos Rendon (score 90)" },
+        { from: "n8n", to: "email", tag: "their language",
+          title: "The visitor gets an email in their language",
+          body: "From your address, quoting what they asked for — not the internal summary. Replying reaches you directly. If the mail fails, the workflow carries on: a mail outage must not cost the sheet row.",
+          call: "Recibí tu mensaje — Carlos Rendon" },
+        { from: "n8n", to: "sheet", tag: "a row",
+          title: "Every lead becomes a row, cold ones too",
+          body: "With the full transcript in one cell: when a lead turns out to be mis-scored, the conversation is the only way to find out why. Status starts at new, and a follow-up workflow only touches rows still marked new.",
+          call: "tier · score · contact · need · transcript · status=new" }
+      ]
+    },
+
+    spool: {
+      label: "When n8n is down",
+      steps: [
+        { from: "backend", to: "n8n", tag: "signed POST",
+          title: "The lead goes out as usual",
+          body: "n8n might be down, the workflow unpublished, or the request rejected. The backend cannot tell which, and does not need to.",
+          call: "POST /webhook/conserje-lead" },
+        { from: "n8n", to: "backend", tag: "no 2xx",
+          title: "Anything but a prompt 2xx is a failure",
+          body: "A refused connection, a 404 from an unpublished workflow, a 500, or five seconds of silence — all the same to the sender.",
+          call: "WebhookError: HTTP 404" },
+        { from: "backend", to: "blobs", tag: "spool",
+          title: "The lead is written to the spool",
+          body: "With the site, the reason and the full payload. If even that write fails, the payload goes to the function log, so the contact details can still be recovered by hand.",
+          call: "conserje-spool · { siteId, reason, spooledAt, payload }" },
+        { from: "backend", to: "widget", tag: "sign-off anyway",
+          title: "The visitor never finds out",
+          body: "They get the same goodbye as on any other day. An outage downstream must not produce an error the visitor can see.",
+          call: "{ session, reply, done: true }" },
+        { from: "blobs", to: "backend", tag: "hourly",
+          title: "A scheduled function replays the spool",
+          body: "There is no machine to put a crontab on, and a maintenance job nobody scheduled is one nobody runs — so the schedule lives in the code.",
+          call: "maintenance.ts · schedule: '@hourly'" },
+        { from: "backend", to: "backend", tag: "fresh signature", guard: true,
+          title: "Re-signed with the current time",
+          body: "The original timestamp is long outside the five-minute window the receiver enforces. Re-sent as-is, it would be rejected as a replay attack — which, from the receiver's side, is exactly what it would look like.",
+          call: "dispatcher.send(url, payload, now)" },
+        { from: "backend", to: "n8n", tag: "replay",
+          title: "Delivered once, then deleted",
+          body: "When n8n answers 2xx the record leaves the spool. The alert arrives once, an hour or so late, and nothing was lost.",
+          call: "1 leads delivered, 0 still spooled" },
+        { from: "backend", to: "blobs", tag: "give up at 24", guard: true,
+          title: "After a day, a lead is set aside, not retried forever",
+          body: "A receiver that acts on a lead and then fails to answer would get it every hour, indefinitely. After 24 failed replays the record moves to a dead-letter store: still recoverable, no longer re-sent.",
+          call: "conserje-spool-dead · attempts: 24" }
+      ]
+    }
+  };
+
+  var svg = document.querySelector(".stage");
+  var elNodes = document.getElementById("nodes");
+  var elBase = document.getElementById("baseEdges");
+  var elLanes = document.getElementById("laneLabels");
+  var elLive = document.getElementById("liveEdge");
+  var elToken = document.getElementById("token");
+  var elCaption = document.getElementById("edgeCaption");
+  var elRail = document.getElementById("rail");
+  var elCounter = document.getElementById("counter");
+  var elTitle = document.getElementById("noteTitle");
+  var elBody = document.getElementById("noteBody");
+  var elCall = document.getElementById("noteCall");
+  var elTag = document.getElementById("tagline");
+  var btnPrev = document.getElementById("prev");
+  var btnNext = document.getElementById("next");
+  var btnPlay = document.getElementById("play");
+  var NS = "http://www.w3.org/2000/svg";
+
+  var flowKey = "turn";
+  var index = 0;
+  var playing = false;
+  var timer = null;
+  var raf = null;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function el(tag, attrs, parent) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+
+  // Where a straight line from one node to another crosses the first node's box.
+  function anchor(a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y;
+    if (dx === 0 && dy === 0) return { x: a.x, y: a.y };
+    var hw = a.w / 2 + 6, hh = a.h / 2 + 6;
+    var sx = dx === 0 ? Infinity : hw / Math.abs(dx);
+    var sy = dy === 0 ? Infinity : hh / Math.abs(dy);
+    var s = Math.min(sx, sy);
+    return { x: a.x + dx * s, y: a.y + dy * s };
+  }
+
+  function pathBetween(fromKey, toKey) {
+    var a = NODES[fromKey], b = NODES[toKey];
+    if (fromKey === toKey) {
+      var t = a.y - a.h / 2 - 6;
+      return "M " + (a.x - 34) + " " + t +
+             " C " + (a.x - 34) + " " + (t - 52) + ", " +
+                     (a.x + 34) + " " + (t - 52) + ", " +
+                     (a.x + 34) + " " + t;
+    }
+    var p = anchor(a, b), q = anchor(b, a);
+    return "M " + p.x + " " + p.y + " L " + q.x + " " + q.y;
+  }
+
+  function drawStatic() {
+    LANES.forEach(function (lane) {
+      var t = el("text", { x: lane.x, y: 30, class: "lane-label", "text-anchor": "middle" }, elLanes);
+      t.textContent = lane.label;
+    });
+    BASE_EDGES.forEach(function (pair) {
+      el("path", { class: "edge-base", d: pathBetween(pair[0], pair[1]) }, elBase);
+    });
+    Object.keys(NODES).forEach(function (key) {
+      var n = NODES[key];
+      var g = el("g", { class: "node" + (n.db ? " is-db" : ""), "data-node": key }, elNodes);
+      el("rect", { x: n.x - n.w / 2, y: n.y - n.h / 2, width: n.w, height: n.h }, g);
+      var name = el("text", { x: n.x, y: n.y - 2, class: "n-name", "text-anchor": "middle" }, g);
+      name.textContent = n.name;
+      var sub = el("text", { x: n.x, y: n.y + 16, class: "n-sub", "text-anchor": "middle" }, g);
+      sub.textContent = n.sub;
+    });
+  }
+
+  function buildRail() {
+    elRail.textContent = "";
+    FLOWS[flowKey].steps.forEach(function (step, i) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = String(i + 1);
+      b.setAttribute("aria-label", "Step " + (i + 1) + ": " + step.title);
+      b.addEventListener("click", function () { stop(); go(i); });
+      li.appendChild(b);
+      elRail.appendChild(li);
+    });
+  }
+
+  function animateToken(d, guard) {
+    if (raf) cancelAnimationFrame(raf);
+    elToken.classList.toggle("is-guard", !!guard);
+    var probe = el("path", { d: d }, svg);
+    var len = probe.getTotalLength();
+    var start = null;
+    var dur = reduce ? 0 : Math.min(1100, 340 + len * 1.6);
+
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = dur === 0 ? 1 : Math.min(1, (ts - start) / dur);
+      var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      var pt = probe.getPointAtLength(eased * len);
+      elToken.setAttribute("transform", "translate(" + pt.x + "," + pt.y + ")");
+      elToken.setAttribute("opacity", "1");
+      if (t < 1) { raf = requestAnimationFrame(frame); }
+      else { probe.remove(); raf = null; }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function go(i) {
+    var steps = FLOWS[flowKey].steps;
+    index = Math.max(0, Math.min(steps.length - 1, i));
+    var step = steps[index];
+    var d = pathBetween(step.from, step.to);
+
+    elLive.setAttribute("d", d);
+    elLive.classList.toggle("is-guard", !!step.guard);
+
+    Array.prototype.forEach.call(elNodes.children, function (g) {
+      var key = g.getAttribute("data-node");
+      var lit = key === step.from || key === step.to;
+      g.classList.toggle("is-lit", lit);
+      g.classList.toggle("is-guard", lit && !!step.guard);
+    });
+
+    var a = NODES[step.from], b = NODES[step.to];
+    var mid = step.from === step.to
+      ? { x: a.x, y: a.y - a.h / 2 - 48 }
+      : { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 12 };
+    elCaption.setAttribute("x", mid.x);
+    elCaption.setAttribute("y", mid.y);
+    elCaption.textContent = step.tag;
+
+    animateToken(d, step.guard);
+
+    elTitle.textContent = step.title;
+    elBody.textContent = step.body;
+    elCall.textContent = step.call;
+    elCall.classList.toggle("is-guard", !!step.guard);
+    if (step.guard) {
+      elTag.hidden = false;
+      elTag.textContent = "guard";
+    } else {
+      elTag.hidden = true;
+    }
+
+    elCounter.textContent = "Step " + (index + 1) + " of " + steps.length;
+    btnPrev.disabled = index === 0;
+    btnNext.disabled = index === steps.length - 1;
+
+    Array.prototype.forEach.call(elRail.querySelectorAll("button"), function (b, i2) {
+      if (i2 === index) b.setAttribute("aria-current", "step");
+      else b.removeAttribute("aria-current");
+      b.classList.toggle("is-done", i2 < index);
+    });
+  }
+
+  function stop() {
+    playing = false;
+    if (timer) { clearInterval(timer); timer = null; }
+    btnPlay.textContent = "Play";
+  }
+
+  function play() {
+    var steps = FLOWS[flowKey].steps;
+    if (index === steps.length - 1) go(0);
+    playing = true;
+    btnPlay.textContent = "Pause";
+    timer = setInterval(function () {
+      if (index >= steps.length - 1) { stop(); return; }
+      go(index + 1);
+    }, reduce ? 1600 : 2400);
+  }
+
+  function setFlow(key) {
+    stop();
+    flowKey = key;
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) {
+      t.setAttribute("aria-selected", String(t.dataset.flow === key));
+    });
+    document.getElementById("panel").setAttribute("aria-labelledby", "tab-" + key);
+    buildRail();
+    go(0);
+  }
+
+  btnPrev.addEventListener("click", function () { stop(); go(index - 1); });
+  btnNext.addEventListener("click", function () { stop(); go(index + 1); });
+  btnPlay.addEventListener("click", function () { playing ? stop() : play(); });
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) {
+    t.addEventListener("click", function () { setFlow(t.dataset.flow); });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+    if (e.key === "ArrowRight") { stop(); go(index + 1); }
+    if (e.key === "ArrowLeft") { stop(); go(index - 1); }
+  });
+
+  drawStatic();
+  buildRail();
+  go(0);
+})();
+
+</script>
+</body>
+</html>
